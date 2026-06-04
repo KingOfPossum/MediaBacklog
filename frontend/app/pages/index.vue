@@ -110,20 +110,14 @@ const items = ref<NavigationMenuItem[]>([
 
 <template>
   <div class="h-screen flex flex-col">
-    <!--
-    -->
-    <UHeader :ui="{ container: 'px-4!' }" />
-
     <div class="flex flex-1 min-h-0 overflow-hidden">
       <USidebar
         rail
         close
         collapsible="icon"
         side="left"
-        class="top-64px!"
-        :ui="{ container: 'px-4!' }"
       >
-        <UNavigationMenu orientation="vertical" :items="items" />
+        <UNavigationMenu orientation="vertical" :items="items"/>
       </USidebar>
 
       <div class="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 p-4 overflow-y-auto flex-1 content-start">
@@ -131,7 +125,6 @@ const items = ref<NavigationMenuItem[]>([
           v-for="card in cards"
           :key="card.id"
           :src="card.img"
-          alt="i"
           class="rounded-2xl object-cover w-full aspect-3/4 hover:scale-105 transition-transform"
         />
       </div>
