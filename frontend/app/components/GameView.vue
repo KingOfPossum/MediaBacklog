@@ -1,5 +1,5 @@
 <script setup lang="ts">
-const cards = ref([
+const items = ref([
   {
     id: 1,
     img: 'https://images.igdb.com/igdb/image/upload/t_1080p/co3ddc.jpg'
@@ -92,29 +92,38 @@ const cards = ref([
 </script>
 
 <template>
-  <UContainer
-    class="
-            max-w-[90%]
-            h-[90%]
-            grid
-            grid-cols-3
-            md:grid-cols-4
-            lg:grid-cols-5
-            xl:grid-cols-6
-            2xl:grid-cols-7
-            gap-5
-            p-4
-            mt-[1.5%]
-            overflow-y-auto
-            flex-1
-            content-start
-    "
-  >
-    <img
-      v-for="card in cards"
-      :key="card.id"
-      :src="card.img"
-      class="rounded-2xl object-cover w-full aspect-3/4 hover:scale-105 transition-transform"
+  <div class="relative h-screen flex flex-col items-center justify-center">
+    <UContainer
+      class="
+              max-w-[90%]
+              w-full
+              h-[80%]
+              p-4
+              bg-accented
+              rounded-lg
+      "
+    >
+      <div class="
+        h-full overflow-y-auto grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start">
+        <img
+          v-for="item in items"
+          :key="item.id"
+          :src="item.img"
+          class="
+            rounded-2xl
+            object-cover
+            w-full
+            aspect-3/4
+            hover:scale-105
+            transition-transform
+          "
+        />
+      </div>
+    </UContainer>
+    <UButton
+      class="absolute size-20 right-[10%] bottom-[15%]"
+      icon="i-lucide:plus"
+      size="xl"
     />
-  </UContainer>
+  </div>
 </template>
