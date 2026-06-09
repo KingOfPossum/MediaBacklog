@@ -92,12 +92,12 @@ const items = ref([
 </script>
 
 <template>
-  <div class="relative h-screen flex flex-col items-center justify-center">
+  <div class="relative h-screen flex flex-col mt-[3%]">
     <UContainer
       class="
               max-w-[90%]
               w-full
-              h-[80%]
+              h-[85%]
               p-4
               bg-accented
               rounded-lg
@@ -121,7 +121,7 @@ const items = ref([
       </div>
     </UContainer>
     <UButton
-      class="absolute size-20 right-[10%] bottom-[15%]"
+      class="absolute size-20 right-[10%] bottom-[20%] pl-7 shadow-2xl drop-shadow-2xl z-10 outline-2 outline-emerald-600"
       icon="i-lucide:plus"
       size="xl"
     />
