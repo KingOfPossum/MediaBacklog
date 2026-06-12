@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import MainSidebar from "~/components/MainSidebar.vue";
+
+const {searchQuery} = mainLayoutSearchbar()
 </script>
 
 <template>
@@ -8,14 +10,14 @@ import MainSidebar from "~/components/MainSidebar.vue";
       <MainSidebar />
 
       <div class="w-full">
-        <UHeader title="">
+        <UHeader>
           <template #left>
             <span>Filter</span>
             <UButton icon="i-lucide:filter" color="neutral" variant="outline" size="xl"/>
           </template>
 
           <template #default>
-            <UInput class="w-30vw" size="xl" placeholder="Search..." color="neutral" variant="outline" icon="i-lucide-search"/>
+            <UInput v-model="searchQuery" class="w-full" size="xl" placeholder="Search..." color="neutral" variant="outline" icon="i-lucide-search"/>
           </template>
 
           <template #right>
