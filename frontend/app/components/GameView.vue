@@ -1,5 +1,14 @@
 <script setup lang="ts">
   const {showGrid} = gridDisplayTypeButton();
+
+  let loading = ref(false);
+
+  const addGame = () => {
+    loading.value = true;
+    setTimeout(() => {
+      loading.value = false;
+    }, 1000);
+  }
 </script>
 
 <template>
@@ -16,7 +25,7 @@
     >
       <div
         v-if="showGrid"
-        class="h-full overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start"
+        class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start"
       >
         <img
           v-for="item in displayedItems"
@@ -40,15 +49,26 @@
       >
         <UTable :data="displayedItems" class="flex-1" >
           <template #img-cell="{row}">
-            <img class="size-[20%]" :src="row.original.img"/>
+            <img class="rounded-2xl size-[10%]" :src="row.original.img"/>
           </template>
         </UTable>
       </div>
     </UContainer>
-    <UButton
-      class="absolute size-20 right-[10%] bottom-[20%] pl-7 shadow-2xl drop-shadow-2xl z-10 outline-2 outline-emerald-600"
-      icon="i-lucide:plus"
-      size="xl"
-    />
+
+    <UModal title="Add Game">
+      <UButton
+        class="absolute size-20 right-[10%] bottom-[20%] pl-7 shadow-2xl drop-shadow-2xl z-10 outline-2 outline-emerald-600"
+        icon="i-lucide:plus"
+        size="xl"
+      />
+
+      <template #body>
+        <div class="flex flex-col">
+          <span>Name:</span>
+          <UInput />
+          <UButton @click="addGame" :loading="loading" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
+        </div>
+      </template>
+    </UModal>
   </div>
 </template>
