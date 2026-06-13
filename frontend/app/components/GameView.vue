@@ -1,3 +1,7 @@
+<script setup lang="ts">
+  const {showGrid} = gridDisplayTypeButton();
+</script>
+
 <template>
   <div class="relative h-screen flex flex-col mt-[3%]">
     <UContainer
@@ -10,8 +14,10 @@
               rounded-lg
       "
     >
-      <div class="
-        h-full overflow-y-auto grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start">
+      <div
+        v-if="showGrid"
+        class="h-full overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start"
+      >
         <img
           v-for="item in displayedItems"
           :key="item.id"
@@ -23,8 +29,20 @@
             aspect-3/4
             hover:scale-105
             transition-transform
+            p-[3%]
           "
         />
+      </div>
+
+      <div
+        v-if="!showGrid"
+        class="h-full overflow-y-auto"
+      >
+        <UTable :data="displayedItems" class="flex-1" >
+          <template #img-cell="{row}">
+            <img class="size-[20%]" :src="row.original.img"/>
+          </template>
+        </UTable>
       </div>
     </UContainer>
     <UButton

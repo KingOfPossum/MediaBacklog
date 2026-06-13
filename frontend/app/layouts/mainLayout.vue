@@ -1,7 +1,8 @@
 <script setup lang="ts">
 import MainSidebar from "~/components/MainSidebar.vue";
 
-const {searchQuery} = mainLayoutSearchbar()
+const {searchQuery} = mainLayoutSearchbar();
+const {showGrid, changeDisplayType} = gridDisplayTypeButton();
 </script>
 
 <template>
@@ -21,7 +22,7 @@ const {searchQuery} = mainLayoutSearchbar()
           </template>
 
           <template #right>
-            <UButton icon="i-lucide:list" color="neutral" variant="outline" size="xl" />
+            <UButton @click="changeDisplayType" :icon="showGrid ? 'i-lucide:list' : 'i-lucide:layout-grid'" color="neutral" variant="outline" size="xl" />
           </template>
         </UHeader>
 
