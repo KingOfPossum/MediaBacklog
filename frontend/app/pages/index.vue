@@ -6,7 +6,7 @@ definePageMeta({
 const {searchQuery} = mainLayoutSearchbar();
 
 watch(searchQuery, () => {
-  const items = getItems();
+  const items = getFilteredItems();
   const searchQueryLower = searchQuery.value.toLowerCase();
 
   const filteredItems = items.filter((item) => {return item.name.toLowerCase().includes(searchQueryLower)});

@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import MainSidebar from "~/components/MainSidebar.vue";
+import {platformFilter} from "~/composables/games";
 
 const {searchQuery} = mainLayoutSearchbar();
 const {showGrid, changeDisplayType} = gridDisplayTypeButton();
-
-const filterValue = ref();
 </script>
 
 <template>
@@ -21,7 +20,7 @@ const filterValue = ref();
 
               <template #content>
                 <div class="flex flex-row">
-                  <UCheckboxGroup legend="Platform" v-model="filterValue" :items="getPlatforms().map((platform) => platform.label)"/>
+                  <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="getPlatforms().map((platform) => platform.label)"/>
                 </div>
               </template>
             </UPopover>
