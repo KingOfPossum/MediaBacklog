@@ -21,6 +21,7 @@ const {showGrid, changeDisplayType} = gridDisplayTypeButton();
               <template #content>
                 <div class="flex flex-row">
                   <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="getPlatforms().map((platform) => platform.label)"/>
+                  <UAvatar class="[&>img]:object-contain bg-transparent" src="/platformIcons/nes.png" />
                 </div>
               </template>
             </UPopover>
