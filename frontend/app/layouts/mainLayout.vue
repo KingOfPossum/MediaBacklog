@@ -3,6 +3,8 @@ import MainSidebar from "~/components/MainSidebar.vue";
 
 const {searchQuery} = mainLayoutSearchbar();
 const {showGrid, changeDisplayType} = gridDisplayTypeButton();
+
+const filterValue = ref();
 </script>
 
 <template>
@@ -14,7 +16,15 @@ const {showGrid, changeDisplayType} = gridDisplayTypeButton();
         <UHeader>
           <template #left>
             <span>Filter</span>
-            <UButton icon="i-lucide:filter" color="neutral" variant="outline" size="xl"/>
+            <UPopover arrow mode="click" :content="{align: 'center', side: 'bottom', sideOffset: 8}">
+              <UButton icon="i-lucide:filter" color="neutral" variant="outline" size="xl"/>
+
+              <template #content>
+                <div class="flex flex-row">
+                  <UCheckboxGroup legend="Platform" v-model="filterValue" :items="getPlatforms().map((platform) => platform.label)"/>
+                </div>
+              </template>
+            </UPopover>
           </template>
 
           <template #default>
