@@ -1,10 +1,10 @@
-export const showGrid = ref(true);
+export const mainLayout = () => {
+  const searchQuery = useState('searchQuery',() => {return ''});
+  const showGrid = useState('showGrid',() => {return true});
 
-export const changeDisplayType = () => {
-  showGrid.value = !showGrid.value;
-}
+  const changeDisplayType = () => {
+    showGrid.value = !showGrid.value;
+  };
 
-export const useSearchQuery = () => {
-  const searchQuery = useState('searchQuery','');
-  return {searchQuery};
+  return {searchQuery, showGrid, changeDisplayType};
 }

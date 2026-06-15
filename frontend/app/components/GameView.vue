@@ -1,8 +1,11 @@
 <script setup lang="ts">
-  let loading = ref(false);
+  import {platforms} from "~/data/platforms"
 
-  const selectValue = ref();
-  const statusValue = ref();
+  const {displayedGames} = useGames();
+  const {addGameName,platformSelect,statusSelect} = addGameModal();
+  const {showGrid} = mainLayout();
+
+  let loading = ref(false);
 
   const addGame = () => {
     loading.value = true;
@@ -29,7 +32,7 @@
         class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start"
       >
         <img
-          v-for="item in displayedItems"
+          v-for="item in displayedGames"
           :key="item.id"
           :src="item.img"
           class="
@@ -48,7 +51,7 @@
         v-if="!showGrid"
         class="h-full overflow-y-auto"
       >
-        <UTable :data="displayedItems" class="flex-1" >
+        <UTable :data="displayedGames" class="flex-1" >
           <template #img-cell="{row}">
             <img class="rounded-2xl size-[10%]" :src="row.original.img"/>
           </template>
@@ -67,15 +70,15 @@
         <div class="flex flex-col">
           <div class="flex flex-col">
             <span>Name:</span>
-            <UInput />
+            <UInput v-model="addGameName" />
           </div>
           <div class="mt-3 flex flex-col">
             <span>Platform:</span>
-            <USelect :v-model="selectValue" :items="getPlatforms().map((platform) => platform.label)"/>
+            <USelect v-model="platformSelect" :items="platforms.map((platform) => platform.label)"/>
           </div>
           <div class="mt-3 flex flex-col">
             <span>Status:</span>
-            <USelect :v-model="statusValue" :items="['Not played','Started','Completed']" />
+            <USelect v-model="statusSelect" :items="['Not played','Started','Completed']" />
           </div>
           <UButton @click="addGame" :loading="loading" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
         </div>

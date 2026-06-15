@@ -1,10 +1,9 @@
 <script setup lang="ts">
 import MainSidebar from "~/components/MainSidebar.vue";
-import {useSearchQuery} from "~/composables/mainLayout";
+import {platforms} from "~/data/platforms"
 
-const {platformFilter} = usePlatformFilter();
-const {searchQuery} = useSearchQuery();
-
+const {platformFilter} = useGames();
+const {searchQuery, showGrid, changeDisplayType} = mainLayout();
 </script>
 
 <template>
@@ -21,7 +20,7 @@ const {searchQuery} = useSearchQuery();
 
               <template #content>
                 <div class="flex flex-row">
-                  <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="getPlatforms().map((item) => item.label)"/>
+                  <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="platforms.map((item) => item.label)"/>
                 </div>
               </template>
             </UPopover>
