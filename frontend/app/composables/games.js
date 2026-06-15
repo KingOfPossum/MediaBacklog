@@ -11,7 +11,7 @@ export const useGames = () => {
     const query = searchQuery.value.toLowerCase();
 
     return games.value.filter((item) => {
-      const matchesPlatform = platformFilter.value.includes(item.platform);
+      const matchesPlatform = item.platforms.some((platform) => platformFilter.value.includes(platform));
       const matchesQuery = item.name.toLowerCase().includes(query);
 
       return matchesPlatform && matchesQuery;

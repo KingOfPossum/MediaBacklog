@@ -27,30 +27,27 @@
               rounded-lg
       "
     >
-      <div
-        v-if="showGrid"
-        class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-5 content-start"
-      >
-        <img
-          v-for="item in displayedGames"
-          :key="item.id"
-          :src="item.img"
-          class="
-            rounded-2xl
-            object-cover
-            w-full
-            aspect-3/4
-            hover:scale-105
-            transition-transform
-            p-[3%]
-          "
-        />
+      <div v-if="showGrid" class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 content-start">
+        <div class="flex flex-col" v-for="item in displayedGames" :key="item.id">
+          <img
+            :src="item.img"
+            class="
+              rounded-2xl
+              object-cover
+              w-full
+              aspect-3/4
+              hover:scale-105
+              transition-transform
+              p-[3%]
+            "
+          />
+          <div class="flex flex-row">
+            <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform}.png`" :title="platform">
+          </div>
+        </div>
       </div>
 
-      <div
-        v-if="!showGrid"
-        class="h-full overflow-y-auto"
-      >
+      <div v-if="!showGrid" class="h-full overflow-y-auto">
         <UTable :data="displayedGames" class="flex-1" >
           <template #img-cell="{row}">
             <img class="rounded-2xl size-[10%]" :src="row.original.img"/>
