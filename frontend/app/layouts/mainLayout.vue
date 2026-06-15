@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import MainSidebar from "~/components/MainSidebar.vue";
-import {platformFilter} from "~/composables/games";
+import {useSearchQuery} from "~/composables/mainLayout";
 
-const {searchQuery} = mainLayoutSearchbar();
-const {showGrid, changeDisplayType} = gridDisplayTypeButton();
+const {platformFilter} = usePlatformFilter();
+const {searchQuery} = useSearchQuery();
+
 </script>
 
 <template>
@@ -20,8 +21,7 @@ const {showGrid, changeDisplayType} = gridDisplayTypeButton();
 
               <template #content>
                 <div class="flex flex-row">
-                  <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="getPlatforms().map((platform) => platform.label)"/>
-                  <UAvatar class="[&>img]:object-contain bg-transparent" src="/platformIcons/nes.png" />
+                  <UCheckboxGroup class="pl-3 pr-3 pt-1 pb-1" legend="Platform" v-model="platformFilter" :items="getPlatforms().map((item) => item.label)"/>
                 </div>
               </template>
             </UPopover>

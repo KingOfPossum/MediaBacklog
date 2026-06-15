@@ -1,16 +1,21 @@
 <script setup lang="ts">
+import {usePlatformFilter} from "~/composables/games";
+
 definePageMeta({
   layout:'main-layout'
 })
 
-const {searchQuery} = mainLayoutSearchbar();
+const {searchQuery} = useSearchQuery()
+const {platformFilter} = usePlatformFilter()
 
 watch(searchQuery, () => {
-  const items = getFilteredItems();
-  const searchQueryLower = searchQuery.value.toLowerCase();
+  filterDisplayedItems(searchQuery.value)
+})
 
-  const filteredItems = items.filter((item) => {return item.name.toLowerCase().includes(searchQueryLower)});
-  setDisplayedItems(filteredItems);
+watch(platformFilter, () => {
+  console.log("Filter changed : ",platformFilter.value)
+  console.log("Current Search Query : ",searchQuery.value)
+
 })
 </script>
 

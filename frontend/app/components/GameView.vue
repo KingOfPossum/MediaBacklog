@@ -1,9 +1,8 @@
 <script setup lang="ts">
-  const {showGrid} = gridDisplayTypeButton();
-
   let loading = ref(false);
 
   const selectValue = ref();
+  const statusValue = ref();
 
   const addGame = () => {
     loading.value = true;
@@ -73,6 +72,10 @@
           <div class="mt-3 flex flex-col">
             <span>Platform:</span>
             <USelect :v-model="selectValue" :items="getPlatforms().map((platform) => platform.label)"/>
+          </div>
+          <div class="mt-3 flex flex-col">
+            <span>Status:</span>
+            <USelect :v-model="statusValue" :items="['Not played','Started','Completed']" />
           </div>
           <UButton @click="addGame" :loading="loading" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
         </div>

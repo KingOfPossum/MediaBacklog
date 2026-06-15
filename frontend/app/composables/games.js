@@ -133,16 +133,19 @@ const items = ref([
   }
 ])
 
-export var displayedItems = ref(items.value)
-export var platformFilter = ref(getPlatforms().map((platform) => platform.label))
+export const displayedItems = ref(items.value)
 
-console.log(platformFilter.value)
+export const filterDisplayedItems = (searchQuery) => {
+  const searchQueryL = searchQuery.toLowerCase();
+  const newItems = items.value
 
-export const getItems = () => {return items.value;};
-export const getFilteredItems = () => {return items.value.filter((item) => platformFilter.value.includes(item.platform))}
+  newItems = newItems.filter((item) => {return platformFilter.value.includes(item.platform)});
+  newItems = newItems.filter((item) => {return item.name.toLowerCase().includes(searchQueryL)})
 
-watch(platformFilter, () => {
-    displayedItems.value = getFilteredItems();
-})
+  displayedItems.value = newItems;
+}
 
-export const setDisplayedItems = (newItems) => {displayedItems.value = newItems;};
+export const usePlatformFilter = () => {
+  const platformFilter = useState('platformFilter',() => {getPlatforms().map((platform) => platform.label)});
+  return {platformFilter};
+}
