@@ -2,17 +2,8 @@
   import {platforms} from "~/data/platforms"
 
   const {displayedGames} = useGames();
-  const {addGameName,platformSelect,statusSelect} = addGameModal();
+  const {addGameName,platformSelect,statusSelect,modalOpen,addGame} = addGameModal();
   const {showGrid} = mainLayout();
-
-  let loading = ref(false);
-
-  const addGame = () => {
-    loading.value = true;
-    setTimeout(() => {
-      loading.value = false;
-    }, 1000);
-  }
 </script>
 
 <template>
@@ -31,6 +22,7 @@
         <div class="flex flex-col" v-for="item in displayedGames" :key="item.id">
           <img
             :src="item.img"
+            :alt="item.name"
             class="
               rounded-2xl
               object-cover
@@ -39,10 +31,11 @@
               hover:scale-105
               transition-transform
               p-[3%]
+              bg-gray-400
             "
           />
           <div class="flex flex-row">
-            <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform}.png`" :title="platform">
+            <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform.toLowerCase().replace(' ','')}.png`" :title="platform">
           </div>
         </div>
       </div>
@@ -56,11 +49,12 @@
       </div>
     </UContainer>
 
-    <UModal title="Add Game">
+    <UModal title="Add Game" :dismissible="false" :open="modalOpen">
       <UButton
         class="absolute size-20 right-[10%] bottom-[20%] pl-7 shadow-2xl drop-shadow-2xl z-10 outline-2 outline-emerald-600"
         icon="i-lucide:plus"
         size="xl"
+        @click="modalOpen = true;"
       />
 
       <template #body>
@@ -77,7 +71,7 @@
             <span>Status:</span>
             <USelect v-model="statusSelect" :items="['Not played','Started','Completed']" />
           </div>
-          <UButton @click="addGame" :loading="loading" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
+          <UButton @click="addGame" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
         </div>
       </template>
     </UModal>

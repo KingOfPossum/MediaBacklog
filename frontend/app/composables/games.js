@@ -1,6 +1,5 @@
 import {games} from "~/data/gameData.ts"
 import {platforms} from "~/data/platforms.ts"
-import {mainLayout} from "~/composables/mainLayout.js";
 
 export const useGames = () => {
   const platformFilter = useState('platformFilter',() => {return platforms.map((platform) => platform.label)});
