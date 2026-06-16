@@ -20,20 +20,21 @@
     >
       <div v-if="showGrid" class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 content-start">
         <div class="flex flex-col" v-for="item in displayedGames" :key="item.id">
-          <img
-            :src="item.img"
-            :alt="item.name"
-            class="
-              rounded-2xl
-              object-cover
-              w-full
-              aspect-3/4
-              hover:scale-105
-              transition-transform
-              p-[3%]
-              bg-gray-400
-            "
-          />
+          <div class="p-[5%]">
+            <img
+              :src="item.img"
+              :alt="item.name"
+              class="
+                rounded-2xl
+                object-cover
+                w-full
+                aspect-3/4
+                hover:scale-105
+                transition-transform
+                bg-gray-400
+              "
+            />
+          </div>
           <div class="flex flex-row">
             <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform.toLowerCase().replace(' ','')}.png`" :title="platform">
           </div>
