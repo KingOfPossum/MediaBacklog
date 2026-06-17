@@ -25,5 +25,3 @@ class Database:
             cursor.execute(query, params)
             data = cursor.fetchone()
         return data
-
-db = Database("games","name VARCHAR")
