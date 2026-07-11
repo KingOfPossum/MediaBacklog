@@ -3,7 +3,7 @@ import sqlite3
 class Database:
     def __init__(self,table_name:str,schema:str):
         self.table_name = table_name
-        self.path = f"data/database.db"
+        self.path = f"./data/database.db"
 
         self.sql_execute(f'CREATE TABLE IF NOT EXISTS {table_name} ({schema})')
 

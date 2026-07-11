@@ -1,4 +1,4 @@
-from database import Database
+from backend.tables.database import Database
 
 class GamesLibraryTable(Database):
     def __init__(self):
