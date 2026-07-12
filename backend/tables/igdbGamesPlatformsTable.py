@@ -8,3 +8,13 @@ class IgdbGamesPlatformsTable(Database):
         FOREIGN KEY (game_id) REFERENCES igdb_games(game_id),
         FOREIGN KEY (platform_id) REFERENCES igdb_platforms(platform_id)
         """
+
+        super().__init__(table_name="igdb_games_platforms", schema=schema)
+
+    def add_entry(self,game_id: int, platform_id: int):
+        query = f"""
+        INSERT INTO {self.table_name}
+        VALUES (?,?)
+        """
+
+        self.sql_execute(query,(game_id,platform_id))

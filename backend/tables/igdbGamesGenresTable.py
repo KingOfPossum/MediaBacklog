@@ -10,3 +10,11 @@ class IgdbGamesGenresTable(Database):
         """
 
         super().__init__(table_name="igdb_games_genres",schema=schema)
+
+    def add_entry(self,game_id: int, genre_id: int):
+        query = f"""
+        INSERT INTO {self.table_name}
+        VALUES (?,?)
+        """
+
+        self.sql_execute(query,(game_id,genre_id))

@@ -1,30 +1,40 @@
 import uvicorn
 
-from backend.tables.gamesBacklogTable import GamesBacklogTable
-from backend.tables.gamesLibraryTable import GamesLibraryTable
-from backend.tables.gamesTable import GamesTable
-from backend.tables.igdbGamesGenresTable import IgdbGamesGenresTable
-from backend.tables.igdbGamesPlatformsTable import IgdbGamesPlatformsTable
-from backend.tables.igdbGamesTable import IgdbGamesTable
-from backend.tables.igdbGenresTable import IgdbGenresTable
-from backend.tables.igdbPlatformsTable import IgdbPlatformsTable
-from backend.tables.usersTable import UsersTable
+from Game import Game
+from backend.tables.databaseCollection import DatabaseCollection
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+
+import sys
+from pathlib import Path
+sys.path.append(str(Path(__file__).parent.parent / "IGDB-PythonWrapper"))
+
+from wrapper import IGDBWrapper
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+wrapper = IGDBWrapper('m4nkh7koxu6lq6ndaj4bzs3n1148l5','3ksot8eb6syir0p3cz7i812xnwm0va')
+database = DatabaseCollection()
 @app.get("/test")
 def test():
     return {"Test":10}
 
-if __name__ == '__main__':
-    games = GamesTable()
-    gamesLibrary = GamesLibraryTable()
-    gamesBacklog = GamesBacklogTable()
-    users = UsersTable()
-    igdbGames = IgdbGamesTable()
-    igdbGenres = IgdbGenresTable()
-    igdbPlatforms = IgdbPlatformsTable()
-    igdbGamesGenres = IgdbGamesGenresTable()
-    igdbGamesPlatforms = IgdbGamesPlatformsTable()
+@app.get("/games/{game_name}_{platform}_{status}")
+def get_game(game_name: str, platform: str, status:str):
+    game = Game.from_igdb(wrapper,game_name,platform)
 
+    print(game)
+
+    database.add_game_to_library(game_name,-1,platform,status,game)
+
+    return {"game":game.cover}
+
+if __name__ == '__main__':
     uvicorn.run(app, host="127.0.0.1",port=5049)
