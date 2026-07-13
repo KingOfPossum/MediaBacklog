@@ -18,3 +18,12 @@ class IgdbGamesPlatformsTable(Database):
         """
 
         self.sql_execute(query,(game_id,platform_id))
+
+    def get_platforms_for_game(self,game_id: int) -> list[int]:
+        query = f"""
+        SELECT platform_id
+        FROM {self.table_name}
+        WHERE game_id=?
+        """
+
+        return [platform[0] for platform in self.sql_execute_fetchall(query,(game_id,))]

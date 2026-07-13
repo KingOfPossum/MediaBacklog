@@ -1,5 +1,4 @@
-from operator import ifloordiv
-
+from backend.GameEntry import GameEntry
 from backend.tables.database import Database
 
 class GamesTable(Database):
@@ -23,11 +22,7 @@ class GamesTable(Database):
         RETURNING id
         """
 
-        id = self.sql_execute_fetchone(query,(igdb_id,game_name))
-        print(id[0])
-        return id[0]
-
-        #self.sql_execute(query,(igdb_id,game_name))
+        return self.sql_execute_fetchone(query,(igdb_id,game_name))[0]
 
     def get_game_id(self,game_name:str) -> int | None:
         query = f"""
@@ -38,3 +33,12 @@ class GamesTable(Database):
 
         id = self.sql_execute_fetchone(query,(game_name,))
         return id[0] if id else None
+
+    def get_game(self,game_id: int) -> GameEntry:
+        query = f"""
+        SELECT *
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        return GameEntry(*self.sql_execute_fetchone(query,(game_id,)))

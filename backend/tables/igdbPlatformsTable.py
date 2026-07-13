@@ -37,3 +37,13 @@ class IgdbPlatformsTable(Database):
 
         id = self.sql_execute_fetchone(query, (platform_name,))
         return id[0] if id else None
+
+    def get_platform_name(self,platform_id:int) -> str | None:
+        query = f"""
+        SELECT platform_name
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        name = self.sql_execute_fetchone(query,(platform_id,))
+        return name[0] if name else None

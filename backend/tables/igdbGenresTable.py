@@ -43,3 +43,13 @@ class IgdbGenresTable(Database):
 
         id = self.sql_execute_fetchone(query,(genre_name,))
         return id[0] if id else None
+
+    def get_genre_name(self, genre_id: int) -> str | None:
+        query = f"""
+        SELECT genre_name
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        result = self.sql_execute_fetchone(query,(genre_id,))
+        return result[0] if result else None

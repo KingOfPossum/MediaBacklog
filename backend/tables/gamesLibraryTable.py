@@ -1,3 +1,4 @@
+from backend.GameLibraryEntry import GameLibraryEntry
 from backend.tables.database import Database
 
 class GamesLibraryTable(Database):
@@ -17,6 +18,26 @@ class GamesLibraryTable(Database):
         query = f"""
         INSERT INTO {self.table_name}(user_id,game_id,console,status)
         VALUES (?,?,?,?)
+        RETURNING id
         """
 
-        self.sql_execute(query,(user_id,game_id,console,status))
+        return self.sql_execute_fetchone(query,(user_id,game_id,console,status))[0]
+
+    def get_library_id(self,user_id:int, game_id: int) -> int | None:
+        query = f"""
+        SELECT id
+        FROM {self.table_name}
+        WHERE user_id=? AND game_id=?
+        """
+
+        library_id = self.sql_execute_fetchone(query,(user_id,game_id))
+        return library_id[0] if library_id else None
+
+    def get_all_games(self) -> list[GameLibraryEntry]:
+        query = f"""
+        SELECT *
+        FROM {self.table_name}
+        """
+
+        result = self.sql_execute_fetchall(query)
+        return [GameLibraryEntry(*game) for game in result]

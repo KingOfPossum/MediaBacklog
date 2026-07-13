@@ -18,3 +18,12 @@ class IgdbGamesGenresTable(Database):
         """
 
         self.sql_execute(query,(game_id,genre_id))
+
+    def get_genres_for_game(self,game_id: int) -> list[int]:
+        query = f"""
+        SELECT genre_id
+        FROM {self.table_name}
+        WHERE game_id=?
+        """
+
+        return [genre[0] for genre in self.sql_execute_fetchall(query,(game_id,))]

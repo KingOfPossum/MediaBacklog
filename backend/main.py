@@ -22,9 +22,9 @@ app.add_middleware(
 
 wrapper = IGDBWrapper('m4nkh7koxu6lq6ndaj4bzs3n1148l5','3ksot8eb6syir0p3cz7i812xnwm0va')
 database = DatabaseCollection()
-@app.get("/test")
-def test():
-    return {"Test":10}
+@app.get("/games/gamesLibrary")
+def get_library_games():
+    return [game.to_dict() for game in database.get_all_games()]
 
 @app.get("/games/{game_name}_{platform}_{status}")
 def get_game(game_name: str, platform: str, status:str):
@@ -37,4 +37,6 @@ def get_game(game_name: str, platform: str, status:str):
     return {"game":game.cover}
 
 if __name__ == '__main__':
+    database.get_all_games()
+
     uvicorn.run(app, host="127.0.0.1",port=5049)

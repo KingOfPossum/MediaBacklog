@@ -1,4 +1,5 @@
 from Game import Game
+from backend.IGDBEntry import IGDBEntry
 from backend.tables.database import Database
 
 class IgdbGamesTable(Database):
@@ -32,3 +33,12 @@ class IgdbGamesTable(Database):
         if id is None:
             return False
         return True
+
+    def get_entry(self,igdb_id:int) -> IGDBEntry:
+        query = f"""
+        SELECT *
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        return IGDBEntry(*self.sql_execute_fetchone(query,(igdb_id,)))
