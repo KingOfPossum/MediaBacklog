@@ -18,13 +18,19 @@ export const platforms = [
     label: "Wii"
   },
   {
-    label: "WiiU"
+    label: "Wii U"
   },
   {
     label: "Switch"
   },
   {
     label: "Switch 2"
+  },
+  {
+    label: "Game Boy"
+  },
+  {
+    label: "Game Boy Advance"
   },
   {
     label: "DS"

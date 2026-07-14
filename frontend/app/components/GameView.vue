@@ -2,7 +2,7 @@
   import {platforms} from "~/data/platforms"
 
   const {displayedGames} = useGames();
-  const {addGameName,platformSelect,statusSelect,modalOpen,addGame} = addGameModal();
+  const {addGameName,platformSelect,statusSelect,modalOpen,loading_request,addGame} = addGameModal();
   const {showGrid} = mainLayout();
 </script>
 
@@ -70,9 +70,9 @@
           </div>
           <div class="mt-3 flex flex-col">
             <span>Status:</span>
-            <USelect v-model="statusSelect" :items="['Not played','Started','Completed']" />
+            <USelect v-model="statusSelect" :items="['Not Played','Started','Completed']" />
           </div>
-          <UButton @click="addGame" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
+          <UButton @click="addGame" :loading="loading_request" class="mt-10 w-30 h-10 pl-9">Submit</UButton>
         </div>
       </template>
     </UModal>

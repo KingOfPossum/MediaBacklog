@@ -6,6 +6,7 @@ export const addGameModal = () => {
   const platformSelect = useState('platformSelect',() => '');
   const statusSelect = useState('statusSelect',() => 'Not Played');
   const modalOpen = useState('modalOpen',() => false);
+  const loading_request = useState('loading_request',() => false);
 
   const addGame = async () => {
     if(games.value.some(game => game.name.toLowerCase() === addGameName.value.toLowerCase())){
@@ -18,6 +19,7 @@ export const addGameModal = () => {
       })
     }
     else {
+      loading_request.value = true;
       const result = await(makeHTTPRequest(`http://127.0.0.1:5049/games/${addGameName.value}_${platformSelect.value}_${statusSelect.value}`))
       games.value.push({
         id:games.value.length+1,
@@ -26,6 +28,7 @@ export const addGameModal = () => {
         status:statusSelect.value,
         img: result['game']
       })
+      loading_request.value = false;
     }
 
     modalOpen.value = false;
@@ -34,5 +37,5 @@ export const addGameModal = () => {
     statusSelect.value = 'Not Played';
   }
 
-  return {addGameName,platformSelect,statusSelect,modalOpen,addGame};
+  return {addGameName,platformSelect,statusSelect,modalOpen,loading_request,addGame};
 }

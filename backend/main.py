@@ -30,8 +30,6 @@ def get_library_games():
 def get_game(game_name: str, platform: str, status:str):
     game = Game.from_igdb(wrapper,game_name,platform)
 
-    print(game)
-
     database.add_game_to_library(game_name,-1,platform,status,game)
 
     return {"game":game.cover}
