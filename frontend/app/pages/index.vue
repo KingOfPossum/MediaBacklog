@@ -2,13 +2,13 @@
 import {load_library} from "~/index.js";
 import {games} from "~/data/gameData.ts";
 
-games.value = [];
+//games.value = [];
 
 definePageMeta({
   layout:'main-layout'
 })
 
-load_library()
+//load_library()
 </script>
 
 <template>
