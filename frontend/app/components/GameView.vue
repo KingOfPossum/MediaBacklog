@@ -39,9 +39,15 @@
             <!--
               <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform.toLowerCase().replace(' ','')}.png`" :title="platform">
             -->
-            <ConsoleIcon console="GameCube" size="32"/>
-            <ConsoleIcon console="NES" size="32"/>
-            <ConsoleIcon console="WiiU_2" size="32"/>
+            <ConsoleIcon console="GameCube" size="64"/>
+            <ConsoleIcon console="NES" size="64"/>
+            <ConsoleIcon console="WiiU_2" size="64"/>
+            <ConsoleIcon console="SNES" size="64"/>
+            <ConsoleIcon console="PS1" size="64"/>
+            <ConsoleIcon console="GameBoy" size="64"/>
+            <ConsoleIcon console="GameBoyAdvance" size="64"/>
+            <ConsoleIcon console="Switch" size="64"/>
+            <ConsoleIcon console="Switch2" size="64"/>
           </div>
         </div>
       </div>

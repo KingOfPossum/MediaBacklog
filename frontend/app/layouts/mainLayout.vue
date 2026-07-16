@@ -41,6 +41,7 @@ const {searchQuery, showGrid, changeDisplayType} = mainLayout();
 
           <template #right>
             <UButton @click="changeDisplayType" :icon="showGrid ? 'i-lucide:list' : 'i-lucide:layout-grid'" color="neutral" variant="outline" size="xl" />
+            <UColorModeButton/>
           </template>
         </UHeader>
 

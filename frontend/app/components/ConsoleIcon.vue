@@ -20,7 +20,7 @@
       class="
         hover:scale-120
         transition-transform
-            "
+      "
       :title="console"
     />
   </div>
