@@ -4,6 +4,8 @@
   const {displayedGames} = useGames();
   const {addGameName,platformSelect,statusSelect,modalOpen,loading_request,addGame} = addGameModal();
   const {showGrid} = mainLayout();
+
+  const testConsoles = ['GameCube','XBOX','XBOXONE','NES','GameCube_2','WiiU_3','Switch2','XBOX360','Switch','GameBoy','GameBoyAdvance','PS1','N64','DS','3DS','Wii','SNES']
 </script>
 
 <template>
@@ -21,33 +23,28 @@
       <div v-if="showGrid" class="h-full scrollbar-none overflow-y-auto overflow-x-visible grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 2xl:grid-cols-7 gap-4 content-start">
         <div class="flex flex-col" v-for="item in displayedGames" :key="item.id">
           <div class="p-[5%]">
-            <img
-              :src="item.img"
-              :alt="item.name"
-              class="
-                rounded-2xl
-                object-cover
-                w-full
-                aspect-3/4
-                hover:scale-105
-                transition-transform
-                bg-gray-400
-              "
-            />
+            <div class="relative hover:scale-105 transition-transform">
+              <img
+                :src="item.img"
+                :alt="item.name"
+                class="
+                  rounded-2xl
+                  object-cover
+                  w-full
+                  aspect-3/4
+                  bg-gray-400
+                "
+              />
+              <img
+                src="/GameBorder.svg"
+                class="absolute inset-0 w-full h-full rounded-2xl pointer-events-none"
+              />
+            </div>
           </div>
-          <div class="flex flex-row pl-1">
-            <!--
-              <img class="hover:scale-115 transition-transform size-8 object-contain bg-gray-500 rounded-lg ml-1 border border-black" v-for="platform in item.platforms" :src="`platformIcons/${platform.toLowerCase().replace(' ','')}.png`" :title="platform">
-            -->
-            <ConsoleIcon console="GameCube" size="64"/>
-            <ConsoleIcon console="NES" size="64"/>
-            <ConsoleIcon console="WiiU_2" size="64"/>
-            <ConsoleIcon console="SNES" size="64"/>
-            <ConsoleIcon console="PS1" size="64"/>
-            <ConsoleIcon console="GameBoy" size="64"/>
-            <ConsoleIcon console="GameBoyAdvance" size="64"/>
-            <ConsoleIcon console="Switch" size="64"/>
-            <ConsoleIcon console="Switch2" size="64"/>
+          <div class="flex flex-row flex-wrap ml-6">
+            <div v-for="platform in item.platforms" class="mr-5">
+              <ConsoleIcon :console="platforms.find((elem) => elem.label == platform)?.console_icon" size="50"/>
+            </div>
           </div>
         </div>
       </div>

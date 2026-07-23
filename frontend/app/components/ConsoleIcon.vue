@@ -18,8 +18,11 @@
       :src="`/platformIconsSprites/${props.console}.svg`"
       :width="size" :height="size"
       class="
-        hover:scale-120
+        hover:scale-250
+        hover:delay-400
         transition-transform
+        ease-in-out
+        duration-500
       "
       :title="console"
     />
