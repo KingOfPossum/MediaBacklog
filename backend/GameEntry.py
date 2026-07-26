@@ -5,7 +5,9 @@ class GameEntry:
     id: int
     igdb_id: int
     name: str
-    game_length: int
+    main_story_length: int
+    main_extra_length: int
+    completionist_length: int
     min_price: int
     avg_price: int
     max_price: int
@@ -16,7 +18,9 @@ GameEntry:
     id: {self.id}
     igdb_id: {self.igdb_id}
     name: {self.name}
-    game_length: {self.game_length}
+    main_story_length: {self.main_story_length}
+    main_extra_length: {self.main_extra_length}
+    completionist_length: {self.completionist_length}
     min_price: {self.min_price}
     avg_price: {self.avg_price}
     max_price: {self.max_price}

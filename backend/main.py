@@ -32,7 +32,7 @@ def get_game(game_name: str, platform: str, status:str):
 
     database.add_game_to_library(game_name,-1,platform,status,game)
 
-    return {"game":game.cover}
+    return {"game":game.cover if game is not None else ""}
 
 if __name__ == '__main__':
     database.get_all_games()

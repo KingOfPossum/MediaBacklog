@@ -1,5 +1,6 @@
 from Game import Game
 from backend.GameAPIEntry import GameAPIEntry
+from backend.HowLongToBeatEntry import HowLongToBeatEntry
 from backend.tables.gamesBacklogTable import GamesBacklogTable
 from backend.tables.gamesLibraryConsoleTable import GamesLibraryConsoleTable
 from backend.tables.gamesLibraryTable import GamesLibraryTable
@@ -10,6 +11,7 @@ from backend.tables.igdbGamesTable import IgdbGamesTable
 from backend.tables.igdbGenresTable import IgdbGenresTable
 from backend.tables.igdbPlatformsTable import IgdbPlatformsTable
 from backend.tables.usersTable import UsersTable
+from backend.HowLongToBeatSearcher import HowLongToBeatSearcher
 
 class DatabaseCollection:
     def __init__(self):
@@ -25,10 +27,13 @@ class DatabaseCollection:
         self.igdbGamesPlatforms = IgdbGamesPlatformsTable()
 
     def add_game(self,game_name: str,igdb_game: Game) -> int:
-        game_id = self.games.add_game(game_name,igdb_game.id)
+        howlongtobeat_infos: HowLongToBeatEntry = HowLongToBeatSearcher.search(game_name)
 
         if igdb_game is None:
+            game_id = self.games.add_game(game_name,-1,howlongtobeat_infos)
             return game_id
+
+        game_id = self.games.add_game(game_name, igdb_game.id,howlongtobeat_infos)
 
         if self.igdbGames.check_if_game_exists(igdb_game.id):
             return game_id
@@ -71,15 +76,20 @@ class DatabaseCollection:
 
     def get_all_games(self) -> list[GameAPIEntry]:
         library_games = self.gamesLibrary.get_all_games()
-
         games = list()
 
         for game in library_games:
             game_entry = self.games.get_game(game.game_id)
             igdb_entry = self.igdbGames.get_entry(game_entry.igdb_id)
 
-            platforms = [self.igdbPlatforms.get_platform_name(platform) for platform in self.igdbGamesPlatforms.get_platforms_for_game(game_entry.igdb_id)]
-            genres = [self.igdbGenres.get_genre_name(genre) for genre in self.igdbGamesGenres.get_genres_for_game(game_entry.igdb_id)]
+            if igdb_entry is not None:
+                platforms = [self.igdbPlatforms.get_platform_name(platform) for platform in self.igdbGamesPlatforms.get_platforms_for_game(game_entry.igdb_id)]
+                genres = [self.igdbGenres.get_genre_name(genre) for genre in self.igdbGamesGenres.get_genres_for_game(game_entry.igdb_id)]
+                cover_url = igdb_entry.cover_url
+            else:
+                platforms = None
+                genres = None
+                cover_url = None
 
             consoles = [x[0] for x in self.gamesLibraryConsole.get_all_consoles_for_game(game.id)]
 
@@ -88,10 +98,12 @@ class DatabaseCollection:
                 library_id=game.id,
                 user_id=game.user_id,
                 consoles=consoles,
-                cover_url=igdb_entry.cover_url,
+                cover_url=cover_url,
                 genres=genres,
                 platforms=platforms,
-                game_length=game_entry.game_length,
+                main_story_length=game_entry.main_story_length,
+                main_extra_length=game_entry.main_extra_length,
+                completionist_length=game_entry.completionist_length,
                 min_price=game_entry.min_price,
                 avg_price=game_entry.avg_price,
                 max_price=game_entry.max_price,

@@ -34,11 +34,15 @@ class IgdbGamesTable(Database):
             return False
         return True
 
-    def get_entry(self,igdb_id:int) -> IGDBEntry:
+    def get_entry(self,igdb_id:int) -> None | IGDBEntry:
+        if igdb_id == -1:
+            return None
+
         query = f"""
         SELECT *
         FROM {self.table_name}
         WHERE id=?
         """
 
-        return IGDBEntry(*self.sql_execute_fetchone(query,(igdb_id,)))
+        entry = self.sql_execute_fetchone(query,(igdb_id,))
+        return IGDBEntry(*entry) if entry else None

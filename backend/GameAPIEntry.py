@@ -10,7 +10,9 @@ class GameAPIEntry:
     cover_url: str
     genres: list[str]
     platforms: list[str]
-    game_length: int
+    main_story_length: int
+    main_extra_length: int
+    completionist_length: int
     min_price: int
     max_price: int
     avg_price: int
@@ -25,7 +27,9 @@ class GameAPIEntry:
             'cover_url':self.cover_url,
             'genres':self.genres,
             'platforms':self.platforms,
-            'game_length':self.game_length,
+            'main_story_length':self.main_story_length,
+            'main_extra_length':self.main_extra_length,
+            'completionist_length':self.completionist_length,
             'min_price':self.min_price,
             'max_price':self.max_price,
             'avg_price':self.avg_price,

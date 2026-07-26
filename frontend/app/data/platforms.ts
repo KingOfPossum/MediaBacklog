@@ -41,7 +41,7 @@ export const platforms = [
   },
   {
     label: "Game Boy Advance",
-    console_icon: "GameBoyAdvance_2"
+    console_icon: "GameBoyAdvance"
   },
   {
     label: "DS",
