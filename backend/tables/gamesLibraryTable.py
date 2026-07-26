@@ -1,4 +1,5 @@
 from backend.GameLibraryEntry import GameLibraryEntry
+from backend.Status import Status
 from backend.tables.database import Database
 
 class GamesLibraryTable(Database):
@@ -31,7 +32,27 @@ class GamesLibraryTable(Database):
         """
 
         library_id = self.sql_execute_fetchone(query,(user_id,game_id))
-        return library_id[0] if library_id else None
+        return library_id[0] if library_id else -1
+
+    def get_user_id(self,library_id:int) -> int:
+        query = f"""
+        SELECT user_id
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        user_id = self.sql_execute_fetchone(query,(library_id,))
+        return user_id[0] if user_id else -1
+
+    def get_status(self,library_id) -> Status:
+        query = f"""
+        SELECT status
+        FROM {self.table_name}
+        WHERE id=?
+        """
+
+        status = self.sql_execute_fetchone(query,(library_id,))
+        return status[0] if status else None
 
     def get_all_games(self) -> list[GameLibraryEntry]:
         query = f"""

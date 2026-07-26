@@ -29,10 +29,11 @@ def get_library_games():
 @app.get("/games/{game_name}_{platform}_{status}")
 def get_game(game_name: str, platform: str, status:str):
     game = Game.from_igdb(wrapper,game_name,platform)
+    game_id,library_id = database.add_game_to_library(game_name,-1,platform,status,game)
 
-    database.add_game_to_library(game_name,-1,platform,status,game)
+    game_entry = database.get_game(game_id,library_id)
 
-    return {"game":game.cover if game is not None else ""}
+    return {"game":game_entry.cover_url}
 
 if __name__ == '__main__':
     database.get_all_games()
