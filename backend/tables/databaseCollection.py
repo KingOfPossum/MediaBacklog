@@ -61,54 +61,64 @@ class DatabaseCollection:
 
         return game_id
 
-    def add_game_to_library(self, game_name:str, user_id:int, console:str, status:str, igdb_game:Game = None):
+    def add_game_to_library(self, game_name:str, user_id:int, console:str, status:str, igdb_game:Game = None) -> tuple:
         game_id = self.games.get_game_id(game_name)
 
         if not game_id:
             game_id = self.add_game(game_name,igdb_game)
 
         library_id = self.gamesLibrary.get_library_id(user_id,game_id)
-        if not library_id:
+        if library_id == -1:
             library_id = self.gamesLibrary.add_game(user_id,game_id,console,status)
 
         if not self.gamesLibraryConsole.check_if_entry_already_exists(library_id,console):
             self.gamesLibraryConsole.add_entry(library_id, console)
 
+        return game_id,library_id
+
+    def get_game(self,game_id:int, library_id:int) -> None | GameAPIEntry:
+        game_entry = self.games.get_game(game_id=game_id)
+
+        if game_entry is None:
+            return None
+
+        igdb_entry = self.igdbGames.get_entry(game_entry.igdb_id)
+
+        if igdb_entry is not None:
+            platforms = [self.igdbPlatforms.get_platform_name(platform) for platform in self.igdbGamesPlatforms.get_platforms_for_game(game_entry.igdb_id)]
+            genres = [self.igdbGenres.get_genre_name(genre) for genre in self.igdbGamesGenres.get_genres_for_game(game_entry.igdb_id)]
+            cover_url = igdb_entry.cover_url
+        else:
+            platforms = None
+            genres = None
+            cover_url = game_entry.howlongtobeat_cover_url
+
+        consoles = [x[0] for x in self.gamesLibraryConsole.get_all_consoles_for_game(library_id=library_id)]
+
+        return GameAPIEntry(
+            name=game_entry.name,
+            library_id=game_entry.id,
+            user_id=self.gamesLibrary.get_user_id(library_id=library_id),
+            consoles=consoles,
+            cover_url=cover_url,
+            genres=genres,
+            platforms=platforms,
+            main_story_length=game_entry.main_story_length,
+            main_extra_length=game_entry.main_extra_length,
+            completionist_length=game_entry.completionist_length,
+            min_price=game_entry.min_price,
+            avg_price=game_entry.avg_price,
+            max_price=game_entry.max_price,
+            status=self.gamesLibrary.get_status(library_id=library_id)
+        )
+
     def get_all_games(self) -> list[GameAPIEntry]:
         library_games = self.gamesLibrary.get_all_games()
+        print(library_games)
         games = list()
 
         for game in library_games:
-            game_entry = self.games.get_game(game.game_id)
-            igdb_entry = self.igdbGames.get_entry(game_entry.igdb_id)
-
-            if igdb_entry is not None:
-                platforms = [self.igdbPlatforms.get_platform_name(platform) for platform in self.igdbGamesPlatforms.get_platforms_for_game(game_entry.igdb_id)]
-                genres = [self.igdbGenres.get_genre_name(genre) for genre in self.igdbGamesGenres.get_genres_for_game(game_entry.igdb_id)]
-                cover_url = igdb_entry.cover_url
-            else:
-                platforms = None
-                genres = None
-                cover_url = None
-
-            consoles = [x[0] for x in self.gamesLibraryConsole.get_all_consoles_for_game(game.id)]
-
-            entry = GameAPIEntry(
-                name=game_entry.name,
-                library_id=game.id,
-                user_id=game.user_id,
-                consoles=consoles,
-                cover_url=cover_url,
-                genres=genres,
-                platforms=platforms,
-                main_story_length=game_entry.main_story_length,
-                main_extra_length=game_entry.main_extra_length,
-                completionist_length=game_entry.completionist_length,
-                min_price=game_entry.min_price,
-                avg_price=game_entry.avg_price,
-                max_price=game_entry.max_price,
-                status=game.status
-            )
+            entry = self.get_game(game.game_id,game.id)
 
             games.append(entry)
 
