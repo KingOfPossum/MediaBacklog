@@ -219,3 +219,5 @@ __marimo__/
 
 # Data folder for backend database
 backend/data/
+c_backend/data/
+*.exe

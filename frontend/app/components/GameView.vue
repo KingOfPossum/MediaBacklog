@@ -39,6 +39,7 @@
                 src="/GameBorder.svg"
                 class="absolute inset-0 w-full h-full rounded-2xl pointer-events-none"
               />
+              <UBadge v-if="item.main_story != -1" class="ml-2" :label="`Main Story:  ${item.main_story} Hours`" variant="outline" icon="lucide:clock" size="xs"/>
             </div>
           </div>
           <div class="flex flex-row flex-wrap ml-6">

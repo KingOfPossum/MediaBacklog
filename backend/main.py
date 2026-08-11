@@ -33,7 +33,7 @@ def get_game(game_name: str, platform: str, status:str):
 
     game_entry = database.get_game(game_id,library_id)
 
-    return {"game":game_entry.cover_url}
+    return game_entry.to_dict()
 
 if __name__ == '__main__':
     database.get_all_games()
