@@ -1,6 +1,7 @@
 #include "database.h"
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 void create_table(sqlite3 *db, database_table table) {
   // Create the command for creating the table
@@ -100,22 +101,56 @@ void insert(sqlite3 *db, database_table table, char **columns, int num_columns, 
   sqlite3_finalize(stmt);
 }
 
-static int callback(void *NotUsed, int argc, char **argv, char **azColName) {
-  printf("CALLBACK!\n");
-  
+static int callback(void *data, int argc, char **argv, char **azColName) {
+  select_result *results = (select_result *)data;
+  results->num_results++;
+
+  // Allocate memory for the current row
+  results->all_results = realloc(results->all_results,sizeof(single_result) * results->num_results);
+
+  results->all_results[results->num_results-1].num_values = argc;
+  // Allocate memory for all values received for the current row
+  results->all_results[results->num_results-1].data = malloc(sizeof(char *) * argc);
+
   for(int i = 0; i < argc; i++) {
     printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
+    
+    if(argv[i] != NULL) {
+      results->all_results[results->num_results-1].data[i] = strdup(argv[i]);
+    }
+    else {
+      results->all_results[results->num_results-1].data[i] = strdup("NULL");
+    }
   }
   printf("\n");
   return 0;
 }
 
-void select(sqlite3 *db, database_table table) {
-  printf("SELECT\n");
-
+select_result *select_sql(sqlite3 *db, database_table table) {
   char select_cmd[512] = "SELECT * FROM ";
   strcat(select_cmd,table.table_name);
   strcat(select_cmd,";");
   
-  sqlite3_exec(db,select_cmd,callback,0,0);
+  select_result *results = malloc(sizeof(select_result));
+  results->num_results = 0;
+  results->all_results = malloc(sizeof(single_result));
+
+  sqlite3_exec(db,select_cmd,callback,results,0);
+
+  return results;
+}
+
+void free_select_results(select_result *results) {
+  if(results == NULL) {
+    return;
+  }
+
+  for(int i = 0;i < results->num_results;i++) {
+    for(int j = 0;j < results->all_results[i].num_values;j++) {
+      free(results->all_results[i].data[j]);
+    }
+    free(results->all_results[i].data);
+  }
+  free(results->all_results);
+  free(results);
 }

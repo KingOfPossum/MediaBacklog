@@ -15,8 +15,19 @@ typedef struct database {
   int num_tables;
 } database;
 
+typedef struct {
+  char **data;
+  int num_values;
+} single_result;
+
+typedef struct {
+  single_result *all_results;
+  int num_results;
+} select_result;
+
 void create_table(sqlite3 *db, database_table table);
 void insert(sqlite3 *db, database_table table, char **columns, int num_columns, char **values, int num_values);
-void select(sqlite3 *db, database_table table);
+select_result *select_sql(sqlite3 *db, database_table table);
+void free_select_results(select_result *results);
 
 #endif
