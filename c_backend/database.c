@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-void create_table(sqlite3 *db, database_table table) {
+void create_table(sqlite3 *connection, database_table table) {
   // Create the command for creating the table
   char create_cmd[512] = "CREATE TABLE IF NOT EXISTS ";
   strcat(create_cmd, table.table_name);
@@ -19,11 +19,11 @@ void create_table(sqlite3 *db, database_table table) {
 
   strcat(create_cmd, ");");
 
-  printf("Created Table %s!\n",table.table_name);
+  printf("Created create cmd: %s\n",create_cmd);
 
   // Execute the create table command
   char *err_msg;
-  int result = sqlite3_exec(db, create_cmd, 0, 0, &err_msg);
+  int result = sqlite3_exec(connection, create_cmd, 0, 0, &err_msg);
 
   if(result != 0) {
     printf("ERROR CREATING TABLE: %s\n", err_msg);
@@ -31,7 +31,7 @@ void create_table(sqlite3 *db, database_table table) {
   }
 }
 
-void insert(sqlite3 *db, database_table table, char **columns, int num_columns, char **values, int num_values) {
+void insert(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values) {
   // Check if the number of values given is a multiple of the number of columns we want to insert
   if(num_values % num_columns != 0) {
     printf("ERROR: Incorrect number of values\n");
@@ -39,7 +39,7 @@ void insert(sqlite3 *db, database_table table, char **columns, int num_columns, 
   }
 
   // Pack all the individual insertions into an transaction for better performance
-  sqlite3_exec(db,"BEGIN TRANSACTION;",0,0,0);
+  sqlite3_exec(connection,"BEGIN TRANSACTION;",0,0,0);
 
   // Create the insert cmd
   char insert_cmd[512] = "INSERT INTO ";
@@ -66,10 +66,10 @@ void insert(sqlite3 *db, database_table table, char **columns, int num_columns, 
 
   // Compile the cmd
   sqlite3_stmt *stmt;
-  int x = sqlite3_prepare_v2(db,insert_cmd,-1,&stmt,0);
+  int x = sqlite3_prepare_v2(connection,insert_cmd,-1,&stmt,0);
 
   if(x != SQLITE_OK){
-    printf("ERROR PREPARE: %s\n",sqlite3_errmsg(db));
+    printf("ERROR PREPARE: %s\n",sqlite3_errmsg(connection));
     return;
   }
 
@@ -87,7 +87,7 @@ void insert(sqlite3 *db, database_table table, char **columns, int num_columns, 
     // Execute the insert cmd for current row
     x = sqlite3_step(stmt);
     if(x != SQLITE_DONE) {
-      printf("ERROR EXECUTE (row : %d): %s\n",row,sqlite3_errmsg(db));
+      printf("ERROR EXECUTE (row : %d): %s\n",row,sqlite3_errmsg(connection));
     }
 
     // Reset statement for next row
@@ -95,47 +95,89 @@ void insert(sqlite3 *db, database_table table, char **columns, int num_columns, 
   }
 
   // End transaction
-  sqlite3_exec(db,"COMMIT;",0,0,0);
+  sqlite3_exec(connection,"COMMIT;",0,0,0);
 
   // Free memory of statement
   sqlite3_finalize(stmt);
 }
 
-static int callback(void *data, int argc, char **argv, char **azColName) {
-  select_result *results = (select_result *)data;
-  results->num_results++;
-
-  // Allocate memory for the current row
-  results->all_results = realloc(results->all_results,sizeof(single_result) * results->num_results);
-
-  results->all_results[results->num_results-1].num_values = argc;
-  // Allocate memory for all values received for the current row
-  results->all_results[results->num_results-1].data = malloc(sizeof(char *) * argc);
-
-  for(int i = 0; i < argc; i++) {
-    printf("%s = %s\n", azColName[i], argv[i] ? argv[i] : "NULL");
-    
-    if(argv[i] != NULL) {
-      results->all_results[results->num_results-1].data[i] = strdup(argv[i]);
-    }
-    else {
-      results->all_results[results->num_results-1].data[i] = strdup("NULL");
+select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params) {
+  // build the select cmd
+  char select_cmd[512] = "SELECT ";
+  
+  // if columns is NULL or num_columns is 0 we select *
+  if(columns == NULL || num_columns == 0) {
+    strcat(select_cmd,"*");
+  }
+  // else select the given colums
+  else {
+    for(int i = 0;i < num_columns;i++) {
+      strcat(select_cmd,columns[i]);
+      if(i < num_columns-1) {
+        strcat(select_cmd,",");
+      }
     }
   }
-  printf("\n");
-  return 0;
-}
 
-select_result *select_sql(sqlite3 *db, database_table table) {
-  char select_cmd[512] = "SELECT * FROM ";
+  strcat(select_cmd," FROM ");
+
   strcat(select_cmd,table.table_name);
+
+  // insert the where clause if given
+  if(where != NULL) {
+    strcat(select_cmd," WHERE ");
+    strcat(select_cmd,where);
+  }
+
   strcat(select_cmd,";");
+
+  // compile the command
+  sqlite3_stmt *stmt;
+  int x = sqlite3_prepare_v2(connection,select_cmd,-1,&stmt,0);
   
+  printf("Compiled statement: %s\n",select_cmd);
+
+  if(x != SQLITE_OK){
+    printf("ERROR PREPARE: %s\n",sqlite3_errmsg(connection));
+    return NULL;
+  }
+
+  // fill the ?'s in the where clause
+  for(int i = 0; i < num_params;i++) {
+    sqlite3_bind_text(stmt,i+1,params[i],-1,SQLITE_TRANSIENT);
+  }
+
+  // initialize results
   select_result *results = malloc(sizeof(select_result));
   results->num_results = 0;
-  results->all_results = malloc(sizeof(single_result));
+  results->all_results = NULL;
+  results->column_names = columns;
 
-  sqlite3_exec(db,select_cmd,callback,results,0);
+  // number of columns returned
+  int returned_cols = sqlite3_column_count(stmt);
+
+  // parse the results into the select_results struct
+  while(sqlite3_step(stmt) == SQLITE_ROW) {
+    results->num_results++;
+    results->all_results = realloc(results->all_results,results->num_results * sizeof(single_result));
+
+    results->all_results[results->num_results-1].num_values = returned_cols;
+    results->all_results[results->num_results-1].data = malloc(sizeof(char *) * returned_cols);
+
+    for(int i = 0; i < returned_cols;i++) {
+      const char *val = (const char *)sqlite3_column_text(stmt,i);
+
+      if(val != NULL) {
+        results->all_results[results->num_results-1].data[i] = strdup(val);
+      }
+      else{
+        results->all_results[results->num_results-1].data[i] = strdup("NULL");
+      }
+    }
+  }
+
+  // free memory of the statement
+  sqlite3_finalize(stmt);
 
   return results;
 }
@@ -153,4 +195,20 @@ void free_select_results(select_result *results) {
   }
   free(results->all_results);
   free(results);
+}
+
+void print_select_results(select_result results) {
+  printf("Results:\n");
+  printf("  Number of Results: %d\n",results.num_results);
+  
+  for(int i = 0;i < results.num_results;i++) {
+    printf("  [");
+    for(int j = 0;j < results.all_results[i].num_values;j++){
+      printf("%s=%s",results.column_names[j],results.all_results[i].data[j]);
+      if(j < results.all_results[i].num_values-1) {
+        printf(", ");
+      }
+    }
+    printf("]\n");
+  }
 }

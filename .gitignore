@@ -221,3 +221,4 @@ __marimo__/
 backend/data/
 c_backend/data/
 *.exe
+*.db
