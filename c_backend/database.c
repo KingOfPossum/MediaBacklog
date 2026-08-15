@@ -3,16 +3,22 @@
 #include <string.h>
 #include <stdlib.h>
 
+void init_database(sqlite3 *connection, database db) {
+  for(int i = 0;i < db.num_tables;i++) {
+    create_table(connection,db.tables[i]);
+  }
+}
+
 void create_table(sqlite3 *connection, database_table table) {
   // Create the command for creating the table
   char create_cmd[512] = "CREATE TABLE IF NOT EXISTS ";
   strcat(create_cmd, table.table_name);
   strcat(create_cmd, " (");
 
-  for(int i = 0;i < table.num_params; i++) {
-    strcat(create_cmd, table.params[i]);
+  for(int i = 0;i < table.num_columns; i++) {
+    strcat(create_cmd, table.columns[i]);
 
-    if(i < table.num_params - 1) {
+    if(i < table.num_columns - 1) {
       strcat(create_cmd, ", ");
     }
   }

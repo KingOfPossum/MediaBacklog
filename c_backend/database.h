@@ -5,8 +5,8 @@
 
 typedef struct database_table {
   char *table_name;
-  char **params;
-  int num_params;
+  char **columns;
+  int num_columns;
 } database_table;
 
 typedef struct database {
@@ -26,6 +26,7 @@ typedef struct {
   char **column_names;
 } select_result;
 
+void init_database(sqlite3 *connection, database db);
 void create_table(sqlite3 *connection, database_table table);
 void insert(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values);
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params);
