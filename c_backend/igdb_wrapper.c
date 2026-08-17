@@ -45,42 +45,32 @@ char *construct_url(char *endpoint) {
 }
 
 char *construct_query(char *game_name, char *platform) {
-  const char *fields = "fields name,url,platforms.name,cover.url; ";
-  
-  char *name_query = malloc(128);
-  strcpy(name_query,"name ~ *\"");
-  strcat(name_query,game_name);
-  strcat(name_query,"\"*");
+  char *query = malloc(512);
 
-  char *platform_query = malloc(128);
-
-  if(platform) {
-    strcpy(platform_query,"(platforms.name ~ *\"");
-    strcat(platform_query,platform);
-    strcat(platform_query,"\"* | platforms.abbreviation ~ *\"");
-    strcat(platform_query,platform);
-    strcat(platform_query,"\"*)");
-  }
-
-  char *where = malloc(256);
-  strcpy(where,"where ");
-  strcat(where,name_query);
-  
-  if(platform) {
-    strcat(where," & ");
-    strcat(where, platform_query);
+  if(query == NULL) {
+    return NULL;
   }
   
-  strcat(where,"; sort rating desc; limit 10;");
-  
-  char *query = malloc(256);
-  strcpy(query,fields);
-  strcat(query,where);
-
+  if(platform) {
+    snprintf(query,512,
+    "fields name,url,platforms.name,cover.url; "
+    "where name ~ *\"%s\"* & (platforms.name ~ *\"%s\"* | platforms.abbreviation ~ *\"%s\"*); "
+    "sort rating desc; limit 10; ",
+    game_name, platform, platform
+    );
+  }
+  else {
+    snprintf(query,512,
+    "fields name,url,platforms.name,cover.url; "
+    "where name ~ *\"%s\"*; ",
+    game_name
+    );
+  }
+ 
   return query;  
 }
 
-int main(int argc, char *argv[]) {
+char *make_request(char *url, char *query) {
   CURL *curl;
   CURLcode res;
 
@@ -88,41 +78,58 @@ int main(int argc, char *argv[]) {
   chunk.memory = malloc(1);
   chunk.size = 0;
 
-  curl_global_init(CURL_GLOBAL_ALL);
   curl = curl_easy_init();
 
   if(curl) {
-    curl_easy_setopt(curl,CURLOPT_URL,construct_url("games"));
-    //curl_easy_setopt(curl,CURLOPT_URL,"https://id.twitch.tv/oauth2/token?client_id=&client_secret=&grant_type=client_credentials");
-
-    curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, writeMemoryCallback);
+    curl_easy_setopt(curl,CURLOPT_URL, url);
+    curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, writeMemoryCallback);
     curl_easy_setopt(curl,CURLOPT_WRITEDATA, (void *)&chunk);
 
     struct curl_slist *headers = NULL;
-    
+
     headers = curl_slist_append(headers, "Client-ID: ");
     headers = curl_slist_append(headers, "Authorization: Bearer ");
     headers = curl_slist_append(headers, "Accept: application/json");
-    
+
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
-    const char *query = construct_query("Rayman 2","N64");
-    printf("%s\n",query);
     curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
 
     res = curl_easy_perform(curl);
-    
+
+    curl_easy_cleanup(curl);
+    curl_slist_free_all(headers);
+
     if(res != CURLE_OK) {
-      printf("ERROR");
+      printf("ERROR!\n");
+      free(chunk.memory);
+      return NULL;
     }
     else {
-      printf("%lu Bytes received\n",(unsigned long)chunk.size);
-      printf("Result:\n%s\n",chunk.memory);
+      return chunk.memory;
     }
-  
-    curl_easy_cleanup(curl);
-    free(chunk.memory);
-    }
+  }
+
+  free(chunk.memory);
+  return NULL;
+}
+
+int main(int argc, char *argv[]) {
+  curl_global_init(CURL_GLOBAL_ALL);
+
+  char *url = construct_url("games");
+  char *query  = construct_query("Metroid Prime","GameCube");
+
+  char *result = make_request(url,query);
+
+  if(result != NULL) {
+    printf("%s\n",result);
+    free(result);
+  }
+
+  free(url);
+  free(query);
+
   curl_global_cleanup();
   return 0;
 }
