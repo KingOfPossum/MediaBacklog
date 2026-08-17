@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "cJSON.h"
 #include <curl/curl.h>
 
 const char *API_URL = "https://api.igdb.com/v4/";
@@ -12,6 +13,15 @@ struct MemoryStruct {
   char *memory;
   size_t size;
 };
+
+typedef struct IGDBEntry {
+  int igdb_id;
+  char *game_name;
+  char *url;
+  char *cover_url;
+  char **platforms;
+  int num_platforms;
+} IGDBEntry;
 
 static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
   size_t realsize = size * nmemb;
@@ -55,7 +65,7 @@ char *construct_query(char *game_name, char *platform) {
     snprintf(query,512,
     "fields name,url,platforms.name,cover.url; "
     "where name ~ *\"%s\"* & (platforms.name ~ *\"%s\"* | platforms.abbreviation ~ *\"%s\"*); "
-    "sort rating desc; limit 10; ",
+    "sort rating desc; limit 1; ",
     game_name, platform, platform
     );
   }
@@ -114,16 +124,120 @@ char *make_request(char *url, char *query) {
   return NULL;
 }
 
+IGDBEntry parseResult(char *result) {  
+  IGDBEntry entry;
+  
+  cJSON *json = cJSON_Parse(result);
+  if(json == NULL) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if(error_ptr != NULL) {
+      printf("Error: %s\n",error_ptr);
+    }
+    cJSON_Delete(json);
+    return entry;
+  }
+
+  if(cJSON_IsArray(json)) {
+    cJSON *game = cJSON_GetArrayItem(json,0);
+
+    entry.game_name = malloc(128);
+    entry.url = malloc(128);
+    entry.cover_url = malloc(128);
+    entry.num_platforms = 0;
+    entry.platforms = NULL;
+
+    cJSON *id = cJSON_GetObjectItemCaseSensitive(game,"id");
+    if(cJSON_IsNumber(id)) {
+      entry.igdb_id = id->valueint;
+    }
+    else {
+      entry.igdb_id = -1;
+    }
+
+    cJSON *name = cJSON_GetObjectItemCaseSensitive(game,"name");
+    if(cJSON_IsString(name)) {
+      strcpy(entry.game_name,name->valuestring);
+    }
+    else {
+      entry.game_name = NULL;
+    }
+
+    cJSON *url = cJSON_GetObjectItemCaseSensitive(game,"url");
+    if(cJSON_IsString(url)) {
+      strcpy(entry.url,url->valuestring);
+    }
+    else {
+      entry.url = NULL;
+    }
+
+    cJSON *cover = cJSON_GetObjectItemCaseSensitive(game,"cover");
+    if(cJSON_IsObject(cover)) {
+      cJSON *cover_url = cJSON_GetObjectItemCaseSensitive(cover,"url");
+      if(cJSON_IsString(cover_url)) {
+        strcpy(entry.cover_url,cover_url->valuestring);
+      }
+      else {
+        entry.cover_url = NULL;
+      }
+    }
+    else {
+      entry.cover_url = NULL;
+    }
+
+    cJSON *platforms = cJSON_GetObjectItemCaseSensitive(game,"platforms");
+    if(cJSON_IsArray(platforms)) {
+      int num_platforms = cJSON_GetArraySize(platforms);
+      entry.num_platforms = num_platforms;
+      entry.platforms = malloc(num_platforms * sizeof(char *));
+
+      for(int i = 0;i < num_platforms;i++) {
+        cJSON *platform = cJSON_GetArrayItem(platforms,i);
+        
+        entry.platforms[i] = NULL;
+
+        if(cJSON_IsObject(platform)) {
+          cJSON *platform_name = cJSON_GetObjectItemCaseSensitive(platform,"name");
+          
+          if(cJSON_IsString(platform_name)) {
+            entry.platforms[i] = malloc(128);
+            strcpy(entry.platforms[i],platform_name->valuestring);
+          }
+          else {
+            entry.platforms[i] = NULL;
+          }
+        }
+      }
+    }
+  }
+  
+  cJSON_Delete(json);
+  return entry;
+}
+
 int main(int argc, char *argv[]) {
   curl_global_init(CURL_GLOBAL_ALL);
 
   char *url = construct_url("games");
-  char *query  = construct_query("Metroid Prime","GameCube");
+  char *query  = construct_query("Skyrim","PC");
 
   char *result = make_request(url,query);
 
   if(result != NULL) {
     printf("%s\n",result);
+
+    IGDBEntry entry = parseResult(result);
+
+    printf("Game:\n");
+    printf("  ID: %d\n",entry.igdb_id);
+    printf("  NAME: %s\n",entry.game_name);
+    printf("  URL: %s\n",entry.url);
+    printf("  COVER_URL: %s\n",entry.cover_url);
+    printf("  PLATFORMS:\n");
+    
+    for(int i = 0;i < entry.num_platforms;i++) {
+      printf("    -%s\n",entry.platforms[i]);
+    }
+
     free(result);
   }
 
