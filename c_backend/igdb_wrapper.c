@@ -4,24 +4,20 @@
 #include "cJSON.h"
 #include <curl/curl.h>
 
+#include "igdb_wrapper.h"
+
 const char *API_URL = "https://api.igdb.com/v4/";
 
-char *construct_url(char *endpoint);
-char *construct_query(char *game_name, char *platform);
+static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
+static char *construct_url(char *endpoint);
+static char *construct_query(char *game_name, char *platform);
+static char *make_request(char *url, char *query);
+static IGDBEntry parseResult(char *result);
 
 struct MemoryStruct {
   char *memory;
   size_t size;
 };
-
-typedef struct IGDBEntry {
-  int igdb_id;
-  char *game_name;
-  char *url;
-  char *cover_url;
-  char **platforms;
-  int num_platforms;
-} IGDBEntry;
 
 static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
   size_t realsize = size * nmemb;
@@ -41,7 +37,7 @@ static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, voi
   return realsize;
 }
 
-char *construct_url(char *endpoint) {
+static char *construct_url(char *endpoint) {
   size_t length = strlen(API_URL) + strlen(endpoint) + 1;
   char *url = malloc(length);
   if(url == NULL) {
@@ -54,7 +50,7 @@ char *construct_url(char *endpoint) {
   return url;
 }
 
-char *construct_query(char *game_name, char *platform) {
+static char *construct_query(char *game_name, char *platform) {
   char *query = malloc(512);
 
   if(query == NULL) {
@@ -80,7 +76,7 @@ char *construct_query(char *game_name, char *platform) {
   return query;  
 }
 
-char *make_request(char *url, char *query) {
+static char *make_request(char *url, char *query) {
   CURL *curl;
   CURLcode res;
 
@@ -97,8 +93,8 @@ char *make_request(char *url, char *query) {
 
     struct curl_slist *headers = NULL;
 
-    headers = curl_slist_append(headers, "Client-ID: ");
-    headers = curl_slist_append(headers, "Authorization: Bearer ");
+    headers = curl_slist_append(headers, "Client-ID: m4nkh7koxu6lq6ndaj4bzs3n1148l5");
+    headers = curl_slist_append(headers, "Authorization: Bearer rj6vnmvto0non59us71cglnb4fdhn1");
     headers = curl_slist_append(headers, "Accept: application/json");
 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
@@ -124,9 +120,13 @@ char *make_request(char *url, char *query) {
   return NULL;
 }
 
-IGDBEntry parseResult(char *result) {  
+static IGDBEntry parseResult(char *result) {  
   IGDBEntry entry;
-  
+
+  memset(&entry,0,sizeof(IGDBEntry));
+  entry.igdb_id = -1;
+  entry.num_platforms = 0;
+
   cJSON *json = cJSON_Parse(result);
   if(json == NULL) {
     const char *error_ptr = cJSON_GetErrorPtr();
@@ -140,52 +140,31 @@ IGDBEntry parseResult(char *result) {
   if(cJSON_IsArray(json)) {
     cJSON *game = cJSON_GetArrayItem(json,0);
 
-    entry.game_name = malloc(128);
-    entry.url = malloc(128);
-    entry.cover_url = malloc(128);
-    entry.num_platforms = 0;
-    entry.platforms = NULL;
-
     cJSON *id = cJSON_GetObjectItemCaseSensitive(game,"id");
-    if(cJSON_IsNumber(id)) {
+    if(id && cJSON_IsNumber(id)) {
       entry.igdb_id = id->valueint;
-    }
-    else {
-      entry.igdb_id = -1;
     }
 
     cJSON *name = cJSON_GetObjectItemCaseSensitive(game,"name");
-    if(cJSON_IsString(name)) {
-      strcpy(entry.game_name,name->valuestring);
-    }
-    else {
-      entry.game_name = NULL;
+    if(name && cJSON_IsString(name)) {
+      entry.game_name = strdup(name->valuestring);
     }
 
     cJSON *url = cJSON_GetObjectItemCaseSensitive(game,"url");
-    if(cJSON_IsString(url)) {
-      strcpy(entry.url,url->valuestring);
-    }
-    else {
-      entry.url = NULL;
+    if(url && cJSON_IsString(url)) {
+      entry.url = strdup(url->valuestring);
     }
 
     cJSON *cover = cJSON_GetObjectItemCaseSensitive(game,"cover");
-    if(cJSON_IsObject(cover)) {
+    if(cover && cJSON_IsObject(cover)) {
       cJSON *cover_url = cJSON_GetObjectItemCaseSensitive(cover,"url");
       if(cJSON_IsString(cover_url)) {
-        strcpy(entry.cover_url,cover_url->valuestring);
+        entry.cover_url = strdup(cover_url->valuestring);
       }
-      else {
-        entry.cover_url = NULL;
-      }
-    }
-    else {
-      entry.cover_url = NULL;
     }
 
     cJSON *platforms = cJSON_GetObjectItemCaseSensitive(game,"platforms");
-    if(cJSON_IsArray(platforms)) {
+    if(platforms && cJSON_IsArray(platforms)) {
       int num_platforms = cJSON_GetArraySize(platforms);
       entry.num_platforms = num_platforms;
       entry.platforms = malloc(num_platforms * sizeof(char *));
@@ -195,17 +174,21 @@ IGDBEntry parseResult(char *result) {
         
         entry.platforms[i] = NULL;
 
-        if(cJSON_IsObject(platform)) {
+        if(platform && cJSON_IsObject(platform)) {
           cJSON *platform_name = cJSON_GetObjectItemCaseSensitive(platform,"name");
           
           if(cJSON_IsString(platform_name)) {
-            entry.platforms[i] = malloc(128);
-            strcpy(entry.platforms[i],platform_name->valuestring);
-          }
-          else {
-            entry.platforms[i] = NULL;
+            entry.platforms[i] = strdup(platform_name->valuestring);
           }
         }
+      }
+    }
+  }
+  else if(cJSON_IsObject(json)) {
+    cJSON *msg = cJSON_GetObjectItemCaseSensitive(json,"message");
+    if(msg && cJSON_IsString(msg)) {
+      if(strcmp(msg->valuestring,"Authorization Failure. Have you tried:") == 0) {
+        printf("ERROR: Authentication failed!\n");
       }
     }
   }
@@ -214,36 +197,44 @@ IGDBEntry parseResult(char *result) {
   return entry;
 }
 
-int main(int argc, char *argv[]) {
-  curl_global_init(CURL_GLOBAL_ALL);
+void free_entry(IGDBEntry *entry) {
+  free(entry->cover_url);
+  free(entry->game_name);
+  free(entry->url);
+  
+  for(int i = 0;i < entry->num_platforms;i++) {
+    free(entry->platforms[i]);
+  }
+  free(entry->platforms);
+}
+
+IGDBEntry getGame(char *game_name, char *platform) {
+  IGDBEntry entry;
+  memset(&entry,0,sizeof(IGDBEntry));
+  entry.igdb_id = -1;
 
   char *url = construct_url("games");
-  char *query  = construct_query("Skyrim","PC");
+  char *query = construct_query(game_name,platform);
 
   char *result = make_request(url,query);
 
+  printf("%s\n",result);
+  
   if(result != NULL) {
-    printf("%s\n",result);
-
-    IGDBEntry entry = parseResult(result);
-
-    printf("Game:\n");
-    printf("  ID: %d\n",entry.igdb_id);
-    printf("  NAME: %s\n",entry.game_name);
-    printf("  URL: %s\n",entry.url);
-    printf("  COVER_URL: %s\n",entry.cover_url);
-    printf("  PLATFORMS:\n");
-    
-    for(int i = 0;i < entry.num_platforms;i++) {
-      printf("    -%s\n",entry.platforms[i]);
-    }
-
-    free(result);
+    entry = parseResult(result);
   }
 
   free(url);
   free(query);
+  free(result);
 
+  return entry;
+}
+
+void init_wrapper() {
+  curl_global_init(CURL_GLOBAL_ALL);
+}
+
+void exit_wrapper() {
   curl_global_cleanup();
-  return 0;
 }
