@@ -1,5 +1,5 @@
 import {games} from "~/data/gameData"
-import {makeHTTPRequest} from "~/utils"
+import {makeHTTPGetRequest} from "~/utils"
 
 export const addGameModal = () => {
   const addGameName = useState('addGameName',() => '');
@@ -20,7 +20,7 @@ export const addGameModal = () => {
     }
     else {
       loading_request.value = true;
-      const result = await(makeHTTPRequest(`http://127.0.0.1:5049/games/${addGameName.value}_${platformSelect.value}_${statusSelect.value}`))
+      const result = await(makeHTTPGetRequest(`http://127.0.0.1:5049/games/${addGameName.value}_${platformSelect.value}_${statusSelect.value}`))
       games.value.push({
         id:games.value.length+1,
         name: addGameName.value,
