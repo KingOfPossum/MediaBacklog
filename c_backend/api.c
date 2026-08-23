@@ -126,8 +126,6 @@ void start_server(int port) {
           }
         }
         
-        closesocket(client_socket);
-        memset(buffer,0,BUFFER_SIZE);
         break;
       }
     }

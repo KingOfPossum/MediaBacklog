@@ -217,8 +217,6 @@ IGDBEntry getGame(char *game_name, char *platform) {
   char *query = construct_query(game_name,platform);
 
   char *result = make_request(url,query);
-
-  printf("%s\n",result);
   
   if(result != NULL) {
     entry = parseResult(result);
@@ -237,4 +235,16 @@ void init_wrapper() {
 
 void exit_wrapper() {
   curl_global_cleanup();
+}
+
+void print_entry(IGDBEntry entry) {
+  printf("IGDB Game Entry:\n");
+  printf("  ID: %d\n",entry.igdb_id);
+  printf("  Name: %s\n",entry.game_name);
+  printf("  URL: %s\n",entry.url);
+  printf("  Cover: %s\n",entry.cover_url);
+  printf("  Platforms:\n");
+  for(int i = 0;i < entry.num_platforms;i++) {
+    printf("    -%s\n",entry.platforms[i]);
+  }
 }

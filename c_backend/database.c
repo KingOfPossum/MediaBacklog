@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 
-void init_database(sqlite3 *connection, database db) {
+void init_database_tables(sqlite3 *connection, database db) {
   for(int i = 0;i < db.num_tables;i++) {
     create_table(connection,db.tables[i]);
   }

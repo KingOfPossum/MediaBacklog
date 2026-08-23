@@ -222,3 +222,4 @@ backend/data/
 c_backend/data/
 *.exe
 *.db
+*.o
