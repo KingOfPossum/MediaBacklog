@@ -26,9 +26,10 @@ typedef struct {
   char **column_names;
 } select_result;
 
+sqlite3 *open_connection(char *path);
 void init_database_tables(sqlite3 *connection, database db);
 void create_table(sqlite3 *connection, database_table table);
-void insert(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values);
+void insert_sql(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values);
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params);
 void free_select_results(select_result *results);
 void print_select_results(select_result results);

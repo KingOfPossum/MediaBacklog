@@ -100,11 +100,22 @@ void start_server(int port) {
       }
       strcat(binding_request,api_bindings.all_bindings[i].request);
       
-      printf("Checking for binding: %d (%s)\n",i,binding_request);
+      //printf("Checking for binding: %d (%s)\n",i,binding_request);
       if(strncmp(buffer,binding_request,strlen(binding_request)) == 0){
         if(api_bindings.all_bindings[i].type == GET_REQUEST) {
+          char http_response[512];
+          strcpy(http_response,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+          );
+
           char *response = api_bindings.all_bindings[i].get_func();
-          send(client_socket,response,strlen(response),0);
+          strcat(http_response,response);
+          
+          send(client_socket,http_response,strlen(http_response),0);
         }
         else if(api_bindings.all_bindings[i].type == POST_REQUEST) {
           char *post_response = 

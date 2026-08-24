@@ -238,7 +238,7 @@ void exit_wrapper() {
 }
 
 void print_entry(IGDBEntry entry) {
-  printf("IGDB Game Entry:\n");
+  printf("\nIGDB Game Entry:\n");
   printf("  ID: %d\n",entry.igdb_id);
   printf("  Name: %s\n",entry.game_name);
   printf("  URL: %s\n",entry.url);
@@ -247,4 +247,5 @@ void print_entry(IGDBEntry entry) {
   for(int i = 0;i < entry.num_platforms;i++) {
     printf("    -%s\n",entry.platforms[i]);
   }
+  printf("\n");
 }

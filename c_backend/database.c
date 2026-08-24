@@ -3,6 +3,19 @@
 #include <string.h>
 #include <stdlib.h>
 
+sqlite3 *open_connection(char *path) {
+  sqlite3 *connection;
+  int rc = sqlite3_open(path,&connection);
+
+  if(rc != SQLITE_OK) {
+    printf("Error while opening database\n");
+    sqlite3_close(connection);
+    return NULL;
+  }
+  
+  return connection;
+}
+
 void init_database_tables(sqlite3 *connection, database db) {
   for(int i = 0;i < db.num_tables;i++) {
     create_table(connection,db.tables[i]);
@@ -37,7 +50,7 @@ void create_table(sqlite3 *connection, database_table table) {
   }
 }
 
-void insert(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values) {
+void insert_sql(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values) {
   // Check if the number of values given is a multiple of the number of columns we want to insert
   if(num_values % num_columns != 0) {
     printf("ERROR: Incorrect number of values\n");
