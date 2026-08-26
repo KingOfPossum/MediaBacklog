@@ -59,7 +59,7 @@ static char *construct_query(char *game_name, char *platform) {
   
   if(platform) {
     snprintf(query,512,
-    "fields name,url,platforms.name,cover.url; "
+    "fields name,url,platforms.name,genres.name,cover.url,summary; "
     "where name ~ *\"%s\"* & (platforms.name ~ *\"%s\"* | platforms.abbreviation ~ *\"%s\"*); "
     "sort rating desc; limit 1; ",
     game_name, platform, platform
@@ -67,7 +67,7 @@ static char *construct_query(char *game_name, char *platform) {
   }
   else {
     snprintf(query,512,
-    "fields name,url,platforms.name,cover.url; "
+    "fields name,url,platforms.name,genres.name,cover.url,summary; "
     "where name ~ *\"%s\"*; ",
     game_name
     );
@@ -121,11 +121,13 @@ static char *make_request(char *url, char *query) {
 }
 
 static IGDBEntry parseResult(char *result) {  
+  printf("%s\n\n",result);
   IGDBEntry entry;
 
   memset(&entry,0,sizeof(IGDBEntry));
   entry.igdb_id = -1;
   entry.num_platforms = 0;
+  entry.num_genres = 0;
 
   cJSON *json = cJSON_Parse(result);
   if(json == NULL) {
@@ -163,6 +165,11 @@ static IGDBEntry parseResult(char *result) {
       }
     }
 
+    cJSON *summary = cJSON_GetObjectItemCaseSensitive(game,"summary");
+    if(summary && cJSON_IsString(summary)) {
+      entry.summary = strdup(summary->valuestring);
+    }
+
     cJSON *platforms = cJSON_GetObjectItemCaseSensitive(game,"platforms");
     if(platforms && cJSON_IsArray(platforms)) {
       int num_platforms = cJSON_GetArraySize(platforms);
@@ -177,8 +184,29 @@ static IGDBEntry parseResult(char *result) {
         if(platform && cJSON_IsObject(platform)) {
           cJSON *platform_name = cJSON_GetObjectItemCaseSensitive(platform,"name");
           
-          if(cJSON_IsString(platform_name)) {
+          if(platform_name && cJSON_IsString(platform_name)) {
             entry.platforms[i] = strdup(platform_name->valuestring);
+          }
+        }
+      }
+    }
+
+    cJSON *genres = cJSON_GetObjectItemCaseSensitive(game,"genres");
+    if(genres && cJSON_IsArray(genres)) {
+      int num_genres = cJSON_GetArraySize(genres);
+      entry.num_genres = num_genres;
+      entry.genres = malloc(num_genres * sizeof(char *));
+
+      for(int i = 0;i < num_genres;i++) {
+        cJSON *genre = cJSON_GetArrayItem(genres,i);
+
+        entry.genres[i] = NULL;
+
+        if(genre && cJSON_IsObject(genre)) {
+          cJSON *genre_name = cJSON_GetObjectItemCaseSensitive(genre,"name");
+
+          if(genre_name && cJSON_IsString(genre_name)) {
+            entry.genres[i] = strdup(genre_name->valuestring);
           }
         }
       }
@@ -243,9 +271,14 @@ void print_entry(IGDBEntry entry) {
   printf("  Name: %s\n",entry.game_name);
   printf("  URL: %s\n",entry.url);
   printf("  Cover: %s\n",entry.cover_url);
+  printf("  Summary: %.150s...\n",entry.summary);
   printf("  Platforms:\n");
   for(int i = 0;i < entry.num_platforms;i++) {
     printf("    -%s\n",entry.platforms[i]);
+  }
+  printf("  Genres:\n");
+  for(int i = 0;i < entry.num_genres;i++) {
+    printf("    -%s\n",entry.genres[i]);
   }
   printf("\n");
 }

@@ -6,8 +6,11 @@ typedef struct IGDBEntry {
   char *game_name;
   char *url;
   char *cover_url;
+  char *summary;
   char **platforms;
   int num_platforms;
+  char **genres;
+  int num_genres;
 } IGDBEntry;
 
 IGDBEntry getGame(char *game_name, char *platform);
