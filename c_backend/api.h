@@ -9,7 +9,7 @@ typedef enum RequestType {
 typedef struct binding {
   char *request;
   char *(*get_func)();
-  void (*post_func)(char *);
+  char *(*post_func)(char *);
   RequestType type;
 } binding;
 
@@ -21,6 +21,6 @@ typedef struct bindings {
 void init_server();
 void start_server(int port);
 void bind_get_request(char *request, char *(*func)());
-void bind_post_request(char *request, void (*func)(char *));
+void bind_post_request(char *request, char *(*func)(char *));
 
 #endif

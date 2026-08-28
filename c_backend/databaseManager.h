@@ -74,4 +74,8 @@ void print_APIGameEntry(APIGameEntry game);
 void print_APILibraryGameEntry(APILibraryGameEntry library_game);
 void print_APIIGDBEntry(APIIGDBEntry igdb_entry);
 
+char *APIGameEntry_to_json(APIGameEntry game);
+char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos);
+char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry);
+
 #endif

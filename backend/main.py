@@ -20,7 +20,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-wrapper = IGDBWrapper('m4nkh7koxu6lq6ndaj4bzs3n1148l5','3ksot8eb6syir0p3cz7i812xnwm0va')
+wrapper = IGDBWrapper('m4nkh7koxu6lq6ndaj4bzs3n1148l5','rj6vnmvto0non59us71cglnb4fdhn1')
 database = DatabaseCollection()
 @app.get("/games/gamesLibrary")
 def get_library_games():
@@ -29,6 +29,7 @@ def get_library_games():
 @app.get("/games/{game_name}_{platform}_{status}")
 def get_game(game_name: str, platform: str, status:str):
     game = Game.from_igdb(wrapper,game_name,platform)
+
     game_id,library_id = database.add_game_to_library(game_name,-1,platform,status,game)
 
     game_entry = database.get_game(game_id,library_id)

@@ -2,8 +2,9 @@
 #include "api.h"
 #include <stdio.h>
 #include "igdb_wrapper.h"
+#include <stdlib.h>
 
-void get_new_game(char *json);
+char *get_new_game(char *json);
 char *get_test();
 
 int main(int argc, char *argv[]) {
@@ -36,7 +37,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
-void get_new_game(char *json) {
+char *get_new_game(char *json) {
   printf("-----------Adding new Game--------\n");
 
   char game_name[128];
@@ -52,7 +53,7 @@ void get_new_game(char *json) {
   if(new_game.igdb_id == -1) {
     printf("Game not found by IGDB :(\n");
     printf("----------------------------------\n\n");
-    return;
+    return "NO GAME FOUND";
   }
 
   APILibraryGameEntry library_game = add_game_to_library(game_name,platform,status,new_game);
@@ -61,6 +62,8 @@ void get_new_game(char *json) {
   free_entry(&new_game);
 
   printf("----------------------------------\n\n");
+  
+  return APILibraryGameEntry_to_json(library_game);
 }
 
 char *get_test() {

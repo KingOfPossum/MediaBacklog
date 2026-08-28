@@ -121,7 +121,7 @@ static char *make_request(char *url, char *query) {
 }
 
 static IGDBEntry parseResult(char *result) {  
-  printf("%s\n\n",result);
+  //printf("%s\n\n",result);
   IGDBEntry entry;
 
   memset(&entry,0,sizeof(IGDBEntry));

@@ -517,6 +517,129 @@ void print_APILibraryGameEntry(APILibraryGameEntry library_game) {
   printf("#############################\n\n");
 }
 
+char *APIGameEntry_to_json(APIGameEntry game) {
+  char *json = malloc(2048);
+
+  snprintf(json, 2048,
+     "{"
+      "\"id\":%d,"
+      "\"igdb_id\":%d,"
+      "\"name\":\"%s\","
+      "\"howlongtobeat_cover_url\":\"%s\","
+      "\"main_story_length\":%d,"
+      "\"main_extra_length\":%d,"
+      "\"completionist_length\":%d,"
+      "\"min_price\":%d,"
+      "\"avg_price\":%d,"
+      "\"max_price\":%d"
+    "}",
+    game.id,
+    game.igdb_id,
+    game.name,
+    game.howlongtobeat_cover_url,
+    game.main_story_length,
+    game.main_extra_length,
+    game.completionist_length,
+    game.min_price,
+    game.avg_price,
+    game.max_price
+  );
+
+  return json;
+}
+
+char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos) {
+  char *json = calloc(2048,sizeof(char));
+  char *genres = calloc(2048,sizeof(char)); 
+  char *platforms = calloc(2048,sizeof(char));
+  
+  if(igdb_infos.num_genres > 0){
+    for(int i = 0;i < igdb_infos.num_genres-1;i++){
+      strcat(genres, "\"");
+      strcat(genres, igdb_infos.genres[i]);
+      strcat(genres, "\",");
+    }
+    strcat(genres, "\"");
+    strcat(genres, igdb_infos.genres[igdb_infos.num_genres-1]);
+    strcat(genres, "\"");
+  }
+
+  if(igdb_infos.num_platforms > 0) {
+    for(int i = 0;i < igdb_infos.num_platforms-1;i++){
+      strcat(platforms, "\"");
+      strcat(platforms, igdb_infos.platforms[i]);
+      strcat(platforms, "\",");
+    }
+    strcat(platforms, "\"");
+    strcat(platforms, igdb_infos.platforms[igdb_infos.num_platforms-1]);
+    strcat(platforms, "\"");
+  }
+
+  snprintf(json, 2048,
+    "{"
+      "\"igdb_id\":%d,"
+      "\"cover_url\":\"%s\","
+      "\"summary\":\"%s\","
+      "\"genres\":[%s],"
+      "\"platforms\":[%s]"
+    "}",
+    igdb_infos.igdb_id,
+    igdb_infos.cover_url,
+    igdb_infos.summary,
+    genres,
+    platforms
+  );
+
+  free(genres);
+  free(platforms);
+
+  printf("%s\n\n",json);
+
+  return json;
+}
+
+char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry) {
+  char *json = calloc(4096, sizeof(char));
+  char *consoles = calloc(2048, sizeof(char));
+
+  if(library_entry.num_consoles > 0){
+    for(int i = 0;i < library_entry.num_consoles-1;i++){
+      strcat(consoles, "\"");
+      strcat(consoles, library_entry.consoles[i]);
+      strcat(consoles, "\",");
+    }
+    strcat(consoles, "\"");
+    strcat(consoles, library_entry.consoles[library_entry.num_consoles-1]);
+    strcat(consoles, "\"");
+  }
+
+  char *game_infos_json = APIGameEntry_to_json(library_entry.game_infos);
+  char *igdb_infos_json = APIIGDBEntry_to_json(library_entry.igdb_infos);
+
+  snprintf(json, 4096,
+    "{"
+      "\"game_infos\":%s,"
+      "\"igdb_infos\":%s,"
+      "\"library_id\":%d,"
+      "\"user_id\":%d,"
+      "\"consoles\":[%s],"
+      "\"status\":\"%s\""
+    "}",
+    game_infos_json,
+    igdb_infos_json,
+    library_entry.library_id,
+    library_entry.user_id,
+    consoles,
+    library_entry.status
+  );
+
+  free(consoles);
+  free(game_infos_json);
+  free(igdb_infos_json);
+
+  return json;
+}
+
 APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status, IGDBEntry game) {
   sqlite3 *connection = open_connection(db.file_name);
 

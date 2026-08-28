@@ -118,22 +118,34 @@ void start_server(int port) {
           send(client_socket,http_response,strlen(http_response),0);
         }
         else if(api_bindings.all_bindings[i].type == POST_REQUEST) {
-          char *post_response = 
-            "HTTP/1.1 204 No Content\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-          
-          send(client_socket,post_response,strlen(post_response),0);
-
           char *body_start = strstr(buffer,"\r\n\r\n");
+          char *response_content = NULL;
+          
 
           if(body_start != NULL) {
             char *json = body_start + 4;    
-            api_bindings.all_bindings[i].post_func(json);
+            response_content = api_bindings.all_bindings[i].post_func(json);
           } 
           else {
             printf("ERROR: Couldn't find body\n");
+            response_content = strdup("{\"error\":\"No body found\"}");
+          }
+
+          char full_response[2048] = {0};
+          snprintf(full_response, sizeof(full_response),
+            "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Type: application/json\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "%s",
+            response_content ? response_content : ""
+          );
+
+          send(client_socket,full_response,strlen(full_response),0);
+
+          if(response_content != NULL) {
+            free(response_content);
           }
         }
         
@@ -161,7 +173,7 @@ void bind_get_request(char *request, char *(*func)()) {
   api_bindings.all_bindings[api_bindings.num_bindings-1].type = GET_REQUEST;
 }
 
-void bind_post_request(char *request, void (*func)(char *)) {
+void bind_post_request(char *request, char *(*func)(char *)) {
   api_bindings.num_bindings++;
   api_bindings.all_bindings = realloc(api_bindings.all_bindings,api_bindings.num_bindings * sizeof(binding));
 
