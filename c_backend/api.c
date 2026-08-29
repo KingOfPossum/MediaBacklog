@@ -111,11 +111,21 @@ void start_server(int port) {
             "Connection: close\r\n"
             "\r\n"
           );
-
-          char *response = api_bindings.all_bindings[i].get_func();
-          strcat(http_response,response);
           
-          send(client_socket,http_response,strlen(http_response),0);
+          char *end_of_line = strstr(buffer, "\r\n");
+          if(end_of_line != NULL) {
+            size_t first_line_len = end_of_line - buffer;
+
+            char *first_line_cpy = calloc(first_line_len + 1, sizeof(char));
+            strncpy(first_line_cpy, buffer, first_line_len);
+
+            char *response = api_bindings.all_bindings[i].get_func(first_line_cpy);
+            free(first_line_cpy);
+
+            strcat(http_response,response);
+            
+            send(client_socket,http_response,strlen(http_response),0);
+          }
         }
         else if(api_bindings.all_bindings[i].type == POST_REQUEST) {
           char *body_start = strstr(buffer,"\r\n\r\n");
@@ -164,7 +174,7 @@ void start_server(int port) {
   WSACleanup();
 }
 
-void bind_get_request(char *request, char *(*func)()) {
+void bind_get_request(char *request, char *(*func)(char *)) {
   api_bindings.num_bindings++;
   api_bindings.all_bindings = realloc(api_bindings.all_bindings,api_bindings.num_bindings * sizeof(binding));
 
@@ -180,4 +190,43 @@ void bind_post_request(char *request, char *(*func)(char *)) {
   api_bindings.all_bindings[api_bindings.num_bindings-1].request = request;
   api_bindings.all_bindings[api_bindings.num_bindings-1].post_func = func;
   api_bindings.all_bindings[api_bindings.num_bindings-1].type = POST_REQUEST;
+}
+
+void decode_url(char *url) {
+  for(int i = 0; url[i] != '\0';i++){
+    if(url[i] == '+'){
+      url[i] = ' ';
+    }
+  }
+}
+
+char *get_query_param(const char *buffer, const char *key) {
+  const char *query_start = strchr(buffer, '?');
+  if (!query_start) {
+    return NULL;
+  }
+
+  char search_key[128];
+  snprintf(search_key, sizeof(search_key), "%s=", key);
+
+  const char *key_pos = strstr(query_start, search_key);
+  if(!key_pos) {
+    return NULL;
+  }
+
+  const char *val_start = key_pos + strlen(search_key);
+  const char *val_end = val_start;
+
+  while(*val_end != '&' && *val_end != ' ' && *val_end != '\0'){
+    val_end++;
+  }
+
+  size_t val_len = val_end - val_start;
+  char *result = calloc(sizeof(val_len + 1), sizeof(char));
+  strncpy(result, val_start, val_len);
+  result[val_len] = '\0';
+
+  decode_url(result);
+
+  return result;
 }

@@ -5,7 +5,7 @@
 #include <stdlib.h>
 
 char *get_new_game(char *json);
-char *get_test();
+char *get_game_func(char *request);
 
 int main(int argc, char *argv[]) {
   printf("--------------Database------------\n");
@@ -23,10 +23,9 @@ int main(int argc, char *argv[]) {
 
   printf("----------------------------------\n\n");
 
-
   printf("--------------Server--------------\n");
 
-  bind_get_request("/test",get_test);
+  bind_get_request("/getGame", get_game_func);
   bind_post_request("/game",get_new_game);
 
   start_server(1234);
@@ -66,7 +65,9 @@ char *get_new_game(char *json) {
   return APILibraryGameEntry_to_json(library_game);
 }
 
-char *get_test() {
-  printf("TEST!!!\n\n");
-  return "{\"msg\": \"This is another test ;)\"}";
+char *get_game_func(char *request) {
+  char *game_name = get_query_param(request, "name");
+  char *game_platform = get_query_param(request, "platform");
+  printf("Lookup for game %s (%s) in database...\n",game_name, game_platform);
+  return "{}";
 }
