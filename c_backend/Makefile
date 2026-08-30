@@ -1,4 +1,6 @@
 CC = gcc
+
+CFLAGS = -g
 LDFLAGS = -lcurl -lws2_32
 
 SRCS = main.c database.c databaseManager.c sqlite3.c api.c igdb_wrapper.c cJSON.c
@@ -11,7 +13,7 @@ $(EXEC): $(OBJS)
 	$(CC) $(OBJS) -o $(EXEC) $(LDFLAGS)
 
 %.o: %.c
-	$(CC) -c $< -o $@
+	$(CC) $(CFLAGS) -c $< -o $@
 
 clean:
 	rm -f $(OBJS) $(EXEC)

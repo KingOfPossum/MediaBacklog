@@ -84,6 +84,11 @@ int init_database(char *path) {
   db.file_name = strdup(path);
   db.num_tables = 10;
   db.tables = malloc(db.num_tables * sizeof(database_table));
+
+  if(!db.tables) {
+    printf("Couldn't allocate memory for db.tables\n");
+  }
+
   memcpy(db.tables,tables, db.num_tables * sizeof(database_table));
 
   sqlite3 *connection = open_connection(db.file_name);
@@ -102,25 +107,27 @@ void close_database() {
   free(db.tables);
 }
 
-int game_exists(sqlite3 *connection,char *name) {
+int game_exists(sqlite3 *connection, char *name) {
   select_result *result = select_sql(connection,games_table,(char *[]){"id"},1,"name=?",(char *[]){name},1);
-  
+
   int id = -1;
-  if(result ->num_results > 0) {
-    id = atoi(result->all_results[0].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0) {
+      id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+    }
+    free_select_results(result);
   }
 
-  free_select_results(result);
   return id;
 }
 
-int add_game(sqlite3 *connection,char *name, IGDBEntry igdb_entry) {  
+int add_game(sqlite3 *connection, char *name, IGDBEntry igdb_entry) {  
   char igdb_id_str[16];
   snprintf(igdb_id_str,sizeof(igdb_id_str),"%d",igdb_entry.igdb_id);
 
   insert_sql(connection, games_table, (char *[]){"name","igdb_id"}, 2, (char *[]){name, igdb_id_str},2);
 
-  int game_id = game_exists(connection,name);
+  int game_id = game_exists(connection, name);
 
   if(igdb_game_exists(connection, igdb_entry)) {
     printf("=> IGDB game already in database!\n");
@@ -128,7 +135,6 @@ int add_game(sqlite3 *connection,char *name, IGDBEntry igdb_entry) {
   }
   printf("=> IGDB game not in database\nNow adding IGDB game to database...\n");
   igdb_add_game(connection, igdb_entry);
-
   return game_id;
 }
 
@@ -137,13 +143,15 @@ int igdb_game_exists(sqlite3 *connection, IGDBEntry igdb_entry) {
   snprintf(igdb_id_str, sizeof(igdb_id_str), "%d", igdb_entry.igdb_id);
 
   select_result *result = select_sql(connection, igdb_games_table, NULL, 0, "id=?", (char *[]){igdb_id_str},1);
+  int exists = 0;
 
-  if(result->num_results > 0) {
+  if(result != NULL) {
+    if(result->num_results > 0) {
+      exists = 1;
+    }
     free_select_results(result);
-    return 1;
   }
-  free_select_results(result);
-  return 0;
+  return exists;
 }
 
 void igdb_add_game(sqlite3 *connection, IGDBEntry igdb_entry) {
@@ -174,7 +182,7 @@ void igdb_add_game(sqlite3 *connection, IGDBEntry igdb_entry) {
 
   printf("Adding all genres of the IGDB entry...\n");
   for(int i = 0;i < igdb_entry.num_genres;i++) {
-    int genre_id = igdb_genre_exists(connection,igdb_entry.genres[i]);
+    int genre_id = igdb_genre_exists(connection, igdb_entry.genres[i]);
     if(genre_id == -1) {
       printf("=> Genre %s was not in database!\nNow adding Genre to database...\n",igdb_entry.genres[i]);
       genre_id = igdb_genre_add(connection, igdb_entry.genres[i]);
@@ -195,14 +203,15 @@ void igdb_add_game(sqlite3 *connection, IGDBEntry igdb_entry) {
 
 int igdb_platform_exists(sqlite3 *connection, char *platform) {
   select_result *result = select_sql(connection, igdb_platforms_table, (char *[]){"id"}, 1, "platform_name=?", (char *[]){platform}, 1);
-
   int id = -1;
 
-  if(result->num_results > 0){
-    id = atoi(result->all_results[0].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+    }
+    free_select_results(result);
   }
 
-  free_select_results(result);
   return id;
 }
 
@@ -212,20 +221,22 @@ int igdb_platform_add(sqlite3 *connection, char *platform) {
   return igdb_platform_exists(connection, platform);
 }
 
-int igdb_games_platform_exists(sqlite3 *connection, int igdb_id, int platform_id) {
+int igdb_games_platform_exists(sqlite3* connection, int igdb_id, int platform_id) {
   char igdb_id_str[16];
   char platform_id_str[16];
   snprintf(igdb_id_str, sizeof(igdb_id_str), "%d", igdb_id);
   snprintf(platform_id_str, sizeof(platform_id_str), "%d", platform_id);
 
   select_result *result = select_sql(connection, igdb_games_platforms_table, NULL, 0, "game_id=? AND platform_id=?", (char *[]){igdb_id_str, platform_id_str}, 2);
+  int exists = 0;
 
-  if(result->num_results > 0){
+  if(result != NULL){
+    if(result->num_results > 0){
+      exists = 1;
+    }
     free_select_results(result);
-    return 1;
   }
-  free_select_results(result);
-  return 0;
+  return exists;
 }
 
 void igdb_games_platform_add(sqlite3 *connection, int igdb_id, int platform_id) {
@@ -239,14 +250,15 @@ void igdb_games_platform_add(sqlite3 *connection, int igdb_id, int platform_id) 
 
 int igdb_genre_exists(sqlite3 *connection, char *genre) {
   select_result *result = select_sql(connection, igdb_genres_table, (char *[]){"id"}, 1, "genre_name=?", (char *[]){genre}, 1);
-
   int id = -1;
 
-  if(result->num_results > 0){
-    id = atoi(result->all_results[0].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+    }
+    free_select_results(result);
   }
 
-  free_select_results(result);
   return id;
 }
 
@@ -263,13 +275,15 @@ int igdb_games_genre_exists(sqlite3 *connection, int igdb_id, int genre_id) {
   snprintf(genre_id_str, sizeof(genre_id_str), "%d", genre_id);
 
   select_result *result = select_sql(connection, igdb_games_genre_table, NULL, 0, "game_id=? AND genre_id=?", (char *[]){igdb_id_str, genre_id_str}, 2);
+  int exists = 0;
 
-  if(result->num_results > 0){
+  if(result != NULL) {
+    if(result->num_results > 0){
+      exists = 1;
+    }
     free_select_results(result);
-    return 1;
   }
-  free_select_results(result);
-  return 0;
+  return exists;
 }
 
 void igdb_games_genre_add(sqlite3 *connection, int igdb_id, int genre_id) {
@@ -289,13 +303,15 @@ int game_exists_in_library(sqlite3 *connection, int user_id, int game_id) {
   snprintf(game_id_str, sizeof(game_id_str), "%d", game_id);
 
   select_result *result = select_sql(connection, games_library_table, (char *[]){"id"}, 1, "user_id=? AND game_id=?", (char *[]){user_id_str, game_id_str},2);
-
   int id = -1;
-  if(result->num_results > 0){
-    id = atoi(result->all_results[0].data[0]);
-  }
 
-  free_select_results(result);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+    }
+    
+    free_select_results(result);
+  }
   return id;
 }
 
@@ -308,7 +324,7 @@ int library_add_game(sqlite3 *connection, int user_id, int game_id, char *status
 
   insert_sql(connection, games_library_table, (char *[]){"user_id","game_id","status"},3, (char *[]){user_id_str, game_id_str, status},3);
 
-  return game_exists_in_library(connection,user_id,game_id);
+  return game_exists_in_library(connection, user_id,game_id);
 }
 
 int library_console_entry_exists(sqlite3 *connection, int library_id, char *platform) {
@@ -316,12 +332,16 @@ int library_console_entry_exists(sqlite3 *connection, int library_id, char *plat
   snprintf(library_id_str, sizeof(library_id_str), "%d", library_id);
 
   select_result *result = select_sql(connection, games_library_console_table, NULL, 0, "library_id=? AND console=?",(char *[]){library_id_str,platform},2);
-  if(result->num_results > 0){
+  int exists = 0;
+
+  if(result != NULL) {
+    if(result->num_results > 0){
+      exists = 1;
+    }
     free_select_results(result);
-    return 1;
   }
-  free_select_results(result);
-  return 0;
+
+  return exists;
 }
 
 void add_library_console_entry(sqlite3 *connection, int library_id, char *platform) {
@@ -347,24 +367,25 @@ APIGameEntry get_game(sqlite3 *connection, int game_id, char *name) {
   APIGameEntry game;  
   memset(&game, 0, sizeof(APIGameEntry));
   game.id = -1;
+  game.igdb_id = -1;
 
-  if(result->num_results > 0) {
-    game.id = atoi(result->all_results[0].data[0]);
-    game.igdb_id = atoi(result->all_results[0].data[1]);
-    game.name = strdup(result->all_results[0].data[2]);
-    if(result->all_results[0].data[3] != NULL) {
-      game.howlongtobeat_cover_url = strdup(result->all_results[0].data[3]);
-    }    
-    game.main_story_length = atoi(result->all_results[0].data[4]);
-    game.main_extra_length = atoi(result->all_results[0].data[5]);
-    game.completionist_length = atoi(result->all_results[0].data[6]);
-    game.min_price = atoi(result->all_results[0].data[7]);
-    game.avg_price = atoi(result->all_results[0].data[8]);
-    game.max_price = atoi(result->all_results[0].data[9]);
+  if(result != NULL) {
+    if(result->num_results > 0) {
+      printf("NUM RESULTS : %d\n", result->all_results[0].num_values);
+      game.id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+      game.igdb_id = result->all_results[0].data[1] ? atoi(result->all_results[0].data[1]) : -1;
+      game.name = result->all_results[0].data[2] ? strdup(result->all_results[0].data[2]) : NULL;
+      game.howlongtobeat_cover_url = result->all_results[0].data[3] ? strdup(result->all_results[0].data[3]) : NULL;  
+      game.main_story_length = result->all_results[0].data[4] ? atoi(result->all_results[0].data[4]) : -1;
+      game.main_extra_length = result->all_results[0].data[5] ? atoi(result->all_results[0].data[5]) : -1;
+      game.completionist_length = result->all_results[0].data[6] ? atoi(result->all_results[0].data[6]) : -1;
+      game.min_price = result->all_results[0].data[7] ? atoi(result->all_results[0].data[7]) : -1;
+      game.avg_price = result->all_results[0].data[8] ? atoi(result->all_results[0].data[8]) : -1;
+      game.max_price = result->all_results[0].data[9] ? atoi(result->all_results[0].data[9]) : -1;   
+    }
+    free_select_results(result);
   }
 
-  free_select_results(result);
-  
   return game;
 }
 
@@ -379,53 +400,70 @@ APIIGDBEntry get_igdb_infos(sqlite3 *connection, int igdb_id) {
   //Get the basic IGDB infos
   select_result *result = select_sql(connection, igdb_games_table, (char *[]){"cover_url","summary"}, 2, "id=?", (char *[]){igdb_id_str}, 1);
 
-  if(result->num_results > 0) {
-    igdb_infos.cover_url = strdup(result->all_results[0].data[0]);
-    igdb_infos.summary = strdup(result->all_results[0].data[1]);
+  if(result != NULL) {
+    if(result->num_results > 0) {
+      igdb_infos.cover_url = result->all_results[0].data[0] ? strdup(result->all_results[0].data[0]) : NULL;
+      igdb_infos.summary = result->all_results[0].data[1] ? strdup(result->all_results[0].data[1]) : NULL;
+    }
+    free_select_results(result);
   }
 
   //Get all the genres for the game
   result = select_sql(connection, igdb_games_genre_table, (char *[]){"genre_id"}, 1, "game_id=?", (char *[]){igdb_id_str}, 1);
-  
-  if(result->num_results > 0){
-    igdb_infos.num_genres = result->num_results;
-    igdb_infos.genres = malloc(igdb_infos.num_genres * sizeof(char *));
 
-    for(int i = 0;i < igdb_infos.num_genres;i++) {
-      select_result *genre_result = select_sql(connection, igdb_genres_table, (char *[]){"genre_name"}, 1, "id=?", (char *[]){result->all_results[i].data[0]}, 1);
-    
-      if(genre_result->num_results > 0){
-        igdb_infos.genres[i] = strdup(genre_result->all_results[0].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      igdb_infos.num_genres = result->num_results;
+      igdb_infos.genres = calloc(igdb_infos.num_genres, sizeof(char *));
+      
+      if(!igdb_infos.genres) {
+        printf("Couldn't allocate memory for igdb_infos.genres\n");
       }
-
-      free_select_results(genre_result);
+      
+      for(int i = 0;i < igdb_infos.num_genres;i++) {
+        select_result *genre_result = select_sql(connection, igdb_genres_table, (char *[]){"genre_name"}, 1, "id=?", (char *[]){result->all_results[i].data[0]}, 1);
+        
+        if(genre_result != NULL){
+          if(genre_result->num_results > 0){
+            igdb_infos.genres[i] = genre_result->all_results[0].data[0] ? strdup(genre_result->all_results[0].data[0]) : NULL;
+          }
+        }
+        free_select_results(genre_result);
+      }    
     }
+    free_select_results(result);
   }
 
   //Get all the platforms for the game
   result = select_sql(connection, igdb_games_platforms_table, (char *[]){"platform_id"}, 1, "game_id=?", (char *[]){igdb_id_str}, 1);
-  
-  if(result->num_results > 0){
-    igdb_infos.num_platforms = result->num_results;
-    igdb_infos.platforms = malloc(igdb_infos.num_platforms * sizeof(char *));
 
-    for(int i = 0;i < igdb_infos.num_platforms;i++) {
-      select_result *platform_result = select_sql(connection, igdb_platforms_table, (char *[]){"platform_name"}, 1, "id=?", (char *[]){result->all_results[i].data[0]}, 1);
-    
-      if(platform_result->num_results > 0){
-        igdb_infos.platforms[i] = strdup(platform_result->all_results[0].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      igdb_infos.num_platforms = result->num_results;
+      igdb_infos.platforms = calloc(igdb_infos.num_platforms, sizeof(char *));
+      
+      if(!igdb_infos.platforms) {
+        printf("Couldn't allocate memory for igdb_infos.platforms\n");
       }
-
-      free_select_results(platform_result);
+      
+      for(int i = 0;i < igdb_infos.num_platforms;i++) {
+        select_result *platform_result = select_sql(connection, igdb_platforms_table, (char *[]){"platform_name"}, 1, "id=?", (char *[]){result->all_results[i].data[0]}, 1);
+        
+        if(platform_result != NULL){
+          if(platform_result->num_results > 0){
+            igdb_infos.platforms[i] = platform_result->all_results[0].data[0] ? strdup(platform_result->all_results[0].data[0]) : NULL;
+          }
+          free_select_results(platform_result);
+        }
+      }
     }
+    free_select_results(result);
   }
-
-  free_select_results(result);
-
+  
   return igdb_infos;
 }
 
-APILibraryGameEntry get_game_from_library(sqlite3 *connection, int game_id, int library_id) {
+APILibraryGameEntry get_game_from_library_by_id(sqlite3 *connection, int game_id, int library_id) {
   //Get general informations for the game
   APIGameEntry game_infos = get_game(connection, game_id, "");
 
@@ -437,6 +475,8 @@ APILibraryGameEntry get_game_from_library(sqlite3 *connection, int game_id, int 
   if(game_infos.igdb_id != -1) {
     igdb_infos = get_igdb_infos(connection, game_infos.igdb_id);
   }
+
+  printf("Get IGDB infos for Game\n");
 
   //Get Library game infos
   APILibraryGameEntry entry;
@@ -450,24 +490,83 @@ APILibraryGameEntry get_game_from_library(sqlite3 *connection, int game_id, int 
   snprintf(library_id_str, sizeof(library_id_str), "%d", library_id);
 
   select_result *result = select_sql(connection, games_library_table, (char *[]){"user_id","status"}, 2, "id=?", (char *[]){library_id_str}, 1);
-  if(result->num_results > 0){
-    entry.user_id = atoi(result->all_results[0].data[0]);
-    entry.status = strdup(result->all_results[0].data[1]);
+
+  if(result != NULL) {
+    if(result->num_results > 0){
+      entry.user_id = result->all_results[0].data[0] ? atoi(result->all_results[0].data[0]) : -1;
+      entry.status = result->all_results[0].data[1] ? strdup(result->all_results[0].data[1]) : NULL;   
+    }
+    free_select_results(result);
   }
 
   //Get all consoles that game was added in the library
   result = select_sql(connection, games_library_console_table, (char *[]){"console"}, 1, "library_id=?", (char *[]){library_id_str},1);
-  if(result->num_results > 0){
-    entry.num_consoles = result->num_results;
-    entry.consoles = malloc(result->num_results * sizeof(char *));
 
-    for(int i = 0;i < result->num_results;i++) {
-      entry.consoles[i] = strdup(result->all_results[i].data[0]);
+  if(result != NULL) {
+    if(result->num_results > 0){
+      entry.num_consoles = result->num_results;
+      entry.consoles = malloc(result->num_results * sizeof(char *));
+      
+      if(!entry.consoles) {
+        printf("Couldn't allocate memory for entry.consoles\n");
+      }
+      
+      for(int i = 0;i < result->num_results;i++) {
+        entry.consoles[i] = result->all_results[i].data[0] ? strdup(result->all_results[i].data[0]) : NULL;
+      }
+      
     }
+    free_select_results(result);
   }
 
-  free_select_results(result);
+  return entry;
+}
 
+APILibraryGameEntry get_game_from_library_by_name(char *name) {
+  sqlite3 *connection = open_connection(db.file_name);
+
+  int game_id = game_exists(connection, name);
+  int library_id = game_exists_in_library(connection, -1 , game_id);
+
+  APILibraryGameEntry entry = get_game_from_library_by_id(connection, game_id, library_id);
+
+  sqlite3_close(connection);
+
+  return entry;
+}
+
+APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status, IGDBEntry game) {
+  sqlite3 *connection = open_connection(db.file_name);
+  
+  int game_id = game_exists(connection, name);
+  if(game_id == -1) {
+    printf("=> Game not in database!\nNow adding game to database...\n");
+    game_id = add_game(connection, name,game);    
+  }
+  else {
+    printf("=> Game is already in database!\n");
+  }
+
+  int library_id = game_exists_in_library(connection, -1, game_id);
+  if(library_id == -1){
+    printf("=> Game not in library!\nNow adding to library...\n");
+    library_id = library_add_game(connection, -1, game_id, status);
+  }
+  else {
+    printf("=> Game is already in library!\n");
+  }
+
+  if(!library_console_entry_exists(connection, library_id, platform)) {
+    printf("=> Library-Console entry does not exists!\nNow adding entry...\n");
+    add_library_console_entry(connection, library_id, platform);
+  }
+  else {
+    printf("=> Library-Console entry does already exists!\n");
+  }
+
+  APILibraryGameEntry entry = get_game_from_library_by_id(connection, game_id, library_id);
+
+  sqlite3_close(connection);
   return entry;
 }
 
@@ -489,15 +588,15 @@ void print_APIGameEntry(APIGameEntry game) {
 void print_APIIGDBEntry(APIIGDBEntry igdb_entry) {
   printf("\nAPIIGDBEntry:\n");
   printf("  ID: %d\n",igdb_entry.igdb_id);
-  printf("  COVER URL: %s\n",igdb_entry.cover_url);
-  printf("  SUMMARY: %.150s...\n", igdb_entry.summary);
+  printf("  COVER URL: %s\n",igdb_entry.cover_url ? igdb_entry.cover_url : "N/A");
+  printf("  SUMMARY: %.150s...\n", igdb_entry.summary ? igdb_entry.summary : "N/A");
   printf("  GENRES:\n");
   for(int i = 0;i < igdb_entry.num_genres;i++){
-    printf("    -%s\n", igdb_entry.genres[i]);
+    printf("    -%s\n", igdb_entry.genres[i] ? igdb_entry.genres[i] : "N/A");
   }
   printf("  PLATFORMS:\n");
   for(int i = 0;i < igdb_entry.num_platforms;i++) {
-    printf("    -%s\n", igdb_entry.platforms[i]);
+    printf("    -%s\n", igdb_entry.platforms[i] ? igdb_entry.platforms[i] : "N/A");
   }
   printf("\n");
 }
@@ -511,14 +610,18 @@ void print_APILibraryGameEntry(APILibraryGameEntry library_game) {
   printf("  USER ID: %d\n", library_game.user_id);
   printf("  CONSOLES:\n");
   for(int i = 0;i < library_game.num_consoles;i++) {
-    printf("    -%s\n",library_game.consoles[i]);
+    printf("    -%s\n",library_game.consoles[i] ? library_game.consoles[i] : "N/A");
   }
-  printf("  STATUS: %s\n", library_game.status);
+  printf("  STATUS: %s\n", library_game.status ? library_game.status : "N/A");
   printf("#############################\n\n");
 }
 
 char *APIGameEntry_to_json(APIGameEntry game) {
-  char *json = malloc(2048);
+  char *json = calloc(2048, sizeof(char));
+
+  if(!json) {
+    printf("Couldn't allocate memory for json\n");
+  }
 
   snprintf(json, 2048,
      "{"
@@ -535,8 +638,8 @@ char *APIGameEntry_to_json(APIGameEntry game) {
     "}",
     game.id,
     game.igdb_id,
-    game.name,
-    game.howlongtobeat_cover_url,
+    game.name ? game.name : "",
+    game.howlongtobeat_cover_url ? game.howlongtobeat_cover_url : "",
     game.main_story_length,
     game.main_extra_length,
     game.completionist_length,
@@ -552,26 +655,36 @@ char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos) {
   char *json = calloc(2048,sizeof(char));
   char *genres = calloc(2048,sizeof(char)); 
   char *platforms = calloc(2048,sizeof(char));
+
+  if(!json){
+    printf("Couldn't allocate memory for json\n");
+  }
+  if(!genres) {
+    printf("Couldn't allocate memory for genres\n");
+  }
+  if(!platforms) {
+    printf("Couldn't allocate memory for platforms\n");
+  }
   
   if(igdb_infos.num_genres > 0){
     for(int i = 0;i < igdb_infos.num_genres-1;i++){
       strcat(genres, "\"");
-      strcat(genres, igdb_infos.genres[i]);
+      strcat(genres, igdb_infos.genres[i] ? igdb_infos.genres[i] : "");
       strcat(genres, "\",");
     }
     strcat(genres, "\"");
-    strcat(genres, igdb_infos.genres[igdb_infos.num_genres-1]);
+    strcat(genres, igdb_infos.genres[igdb_infos.num_genres-1] ? igdb_infos.genres[igdb_infos.num_genres-1] : "");
     strcat(genres, "\"");
   }
 
   if(igdb_infos.num_platforms > 0) {
     for(int i = 0;i < igdb_infos.num_platforms-1;i++){
       strcat(platforms, "\"");
-      strcat(platforms, igdb_infos.platforms[i]);
+      strcat(platforms, igdb_infos.platforms[i] ? igdb_infos.platforms[i] : "");
       strcat(platforms, "\",");
     }
     strcat(platforms, "\"");
-    strcat(platforms, igdb_infos.platforms[igdb_infos.num_platforms-1]);
+    strcat(platforms, igdb_infos.platforms[igdb_infos.num_platforms-1] ? igdb_infos.platforms[igdb_infos.num_platforms-1] : "");
     strcat(platforms, "\"");
   }
 
@@ -584,16 +697,14 @@ char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos) {
       "\"platforms\":[%s]"
     "}",
     igdb_infos.igdb_id,
-    igdb_infos.cover_url,
-    igdb_infos.summary,
+    igdb_infos.cover_url ? igdb_infos.cover_url : "",
+    igdb_infos.summary ? igdb_infos.summary : "",
     genres,
     platforms
   );
 
   free(genres);
   free(platforms);
-
-  printf("%s\n\n",json);
 
   return json;
 }
@@ -602,14 +713,21 @@ char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry) {
   char *json = calloc(4096, sizeof(char));
   char *consoles = calloc(2048, sizeof(char));
 
+  if(!json) {
+    printf("Couldn't allocate memory for json\n");
+  }
+  if(!consoles) {
+    printf("Couldn't allocate memory for consoles\n");
+  }
+
   if(library_entry.num_consoles > 0){
     for(int i = 0;i < library_entry.num_consoles-1;i++){
       strcat(consoles, "\"");
-      strcat(consoles, library_entry.consoles[i]);
+      strcat(consoles, library_entry.consoles[i] ? library_entry.consoles[i] : "");
       strcat(consoles, "\",");
     }
     strcat(consoles, "\"");
-    strcat(consoles, library_entry.consoles[library_entry.num_consoles-1]);
+    strcat(consoles, library_entry.consoles[library_entry.num_consoles-1] ? library_entry.consoles[library_entry.num_consoles-1] : "");
     strcat(consoles, "\"");
   }
 
@@ -630,7 +748,7 @@ char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry) {
     library_entry.library_id,
     library_entry.user_id,
     consoles,
-    library_entry.status
+    library_entry.status ? library_entry.status : ""
   );
 
   free(consoles);
@@ -640,38 +758,56 @@ char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry) {
   return json;
 }
 
-APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status, IGDBEntry game) {
-  sqlite3 *connection = open_connection(db.file_name);
+void free_APIGameEntry(APIGameEntry *game) {
+  if(game->name) {
+    free(game->name);
+  }
+  if(game->howlongtobeat_cover_url) {
+    free(game->howlongtobeat_cover_url);
+  }
+}
 
-  int game_id = game_exists(connection,name);
-  if(game_id == -1) {
-    printf("=> Game not in database!\nNow adding game to database...\n");
-    game_id = add_game(connection,name,game);    
+void free_APIIGDBEntry(APIIGDBEntry *igdb) {
+  if(igdb->cover_url) {
+    free(igdb->cover_url);
   }
-  else {
-    printf("=> Game is already in database!\n");
-  }
-
-  int library_id = game_exists_in_library(connection, -1, game_id);
-  if(library_id == -1){
-    printf("=> Game not in library!\nNow adding to library...\n");
-    library_id = library_add_game(connection, -1, game_id, status);
-  }
-  else {
-    printf("=> Game is already in library!\n");
+  if(igdb->summary) {
+    free(igdb->summary);
   }
 
-  if(!library_console_entry_exists(connection,library_id, platform)) {
-    printf("=> Library-Console entry does not exists!\nNow adding entry...\n");
-    add_library_console_entry(connection, library_id, platform);
-  }
-  else {
-    printf("=> Library-Console entry does already exists!\n");
+  if(igdb->genres) {
+    for(int i = 0;i < igdb->num_genres;i++) {
+      if(igdb->genres[i]) {
+        free(igdb->genres[i]);
+      }
+    }
+    free(igdb->genres);
   }
 
-  APILibraryGameEntry entry = get_game_from_library(connection, game_id, library_id);
+  if(igdb->platforms) {
+    for(int i = 0;i < igdb->num_platforms;i++) {
+      if(igdb->platforms[i]) {
+        free(igdb->platforms[i]);
+      }
+    }
+    free(igdb->platforms);
+  }
+}
 
-  sqlite3_close(connection);
-  
-  return entry;
+void free_APILibraryGameEntry(APILibraryGameEntry *entry) {
+  free_APIGameEntry(&entry->game_infos);
+  free_APIIGDBEntry(&entry->igdb_infos);
+
+  if(entry->status) {
+    free(entry->status);
+  }
+
+  if(entry->consoles) {
+    for(int i = 0;i < entry->num_consoles;i++) {
+      if(entry->consoles[i]) {
+        free(entry->consoles[i]);
+      }
+    }
+    free(entry->consoles);
+  }
 }

@@ -40,8 +40,8 @@ typedef struct APILibraryGameEntry {
 int init_database(char *path);
 void close_database();
 
-int game_exists(sqlite3 *connection,char *name);
-int add_game(sqlite3 *connection,char *name, IGDBEntry igdb_entry);
+int game_exists(sqlite3 *connection, char *name);
+int add_game(sqlite3 *connection, char *name, IGDBEntry igdb_entry);
 
 int igdb_game_exists(sqlite3 *connection, IGDBEntry igdb_entry);
 void igdb_add_game(sqlite3 *connection, IGDBEntry igdb_entry);
@@ -68,7 +68,8 @@ APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status
 
 APIGameEntry get_game(sqlite3 *connection, int game_id, char *name);
 APIIGDBEntry get_igdb_infos(sqlite3 *connection, int igdb_id);
-APILibraryGameEntry get_game_from_library(sqlite3 *connection, int game_id, int library_id);
+APILibraryGameEntry get_game_from_library_by_id(sqlite3 *connection, int game_id, int library_id);
+APILibraryGameEntry get_game_from_library_by_name(char *name);
 
 void print_APIGameEntry(APIGameEntry game);
 void print_APILibraryGameEntry(APILibraryGameEntry library_game);
@@ -77,5 +78,9 @@ void print_APIIGDBEntry(APIIGDBEntry igdb_entry);
 char *APIGameEntry_to_json(APIGameEntry game);
 char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos);
 char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry);
+
+void free_APIGameEntry(APIGameEntry *game);
+void free_APIIGDBEntry(APIIGDBEntry *igdb);
+void free_APILibraryGameEntry(APILibraryGameEntry *entry);
 
 #endif

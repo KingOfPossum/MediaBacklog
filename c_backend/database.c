@@ -13,6 +13,10 @@ sqlite3 *open_connection(char *path) {
     return NULL;
   }
   
+  sqlite3_busy_timeout(connection,5000);
+  sqlite3_exec(connection, "PRAGMA journal_mode=WAL;", NULL, NULL, NULL);
+  sqlite3_exec(connection, "PRAGMA synchronous=NORMAL;", NULL, NULL, NULL);
+
   return connection;
 }
 
