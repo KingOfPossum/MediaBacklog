@@ -1,6 +1,16 @@
-#include <winsock2.h>
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 #include "api.h"
+
+#ifdef _WIN32
+  #include <winsock2.h>
+#elif defined (__linux__)
+  #include <sys/socket.h>
+  #include <netinet/in.h>
+  #include <arpa/inet.h>
+  #include <unistd.h>
+#endif
 
 #define BUFFER_SIZE 2048
 
@@ -11,64 +21,126 @@ void init_server() {
 }
 
 void start_server(int port) {
-  WSADATA wsadata;
-  SOCKET server_socket, client_socket;
-  int wsaerr;
   struct sockaddr_in service;
-  int addrlen = sizeof(service);
   char buffer[BUFFER_SIZE] = {0};
 
-  WORD wVersionRequested = MAKEWORD(2,2);
+  #ifdef _WIN32
+    int addrlen = sizeof(service);
 
-  wsaerr = WSAStartup(wVersionRequested,&wsadata);
-  if(wsaerr != 0) {
-    printf("Winsock dll not found!\n");
-  }
-  else {
-    printf("Winsock dll found!\n");
-    printf("Status: %s\n",wsadata.szSystemStatus);
-  }
+    WSADATA wsadata;
+    SOCKET server_socket, client_socket;
+    int wsaerr;
+    
+    WORD wVersionRequested = MAKEWORD(2,2);
+    
+    wsaerr = WSAStartup(wVersionRequested,&wsadata);
+    if(wsaerr != 0) {
+      printf("Winsock dll not found!\n");
+    }
+    else {
+      printf("Winsock dll found!\n");
+      printf("Status: %s\n",wsadata.szSystemStatus);
+    }
+  
+    server_socket = INVALID_SOCKET;
+  #elif defined(__linux__)
+    int server_socket, client_socket;
+    socklen_t addrlen = sizeof(service);
+  #endif
 
-  server_socket = INVALID_SOCKET;
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
-  if(server_socket == INVALID_SOCKET) {
-    printf("Socket failed with error: %d\n",WSAGetLastError());
-    WSACleanup();
-    return;
-  }
-  else{
-    printf("Socket is OK\n");
-  }
+  
+  #ifdef _WIN32
+    if(server_socket == INVALID_SOCKET) {
+      printf("Socket failed with error: %d\n",WSAGetLastError());
+      WSACleanup();
+      return;
+    }
+    else{
+      printf("Socket is OK\n");
+    }
+  #elif defined(__linux__)
+    if(server_socket < 0) {
+      printf("Socket failed with error");
+      return;
+    }
+    else {
+      printf("Socket is OK\n");
+    }
+
+    int opt = 1;
+    if(setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+      printf("Error: setsockopt\n");
+      close(server_socket);
+      return;
+    }
+  #endif
 
   service.sin_family = AF_INET;
   service.sin_addr.s_addr = INADDR_ANY;
   service.sin_port = htons(port);
 
-  if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) == SOCKET_ERROR) {
-    printf("Binding failed with error: %d\n",WSAGetLastError());
-    closesocket(server_socket);
-    WSACleanup();
-    return;
-  }
+  #ifdef _WIN32
+    if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) == SOCKET_ERROR) {
+      printf("Binding failed with error: %d\n",WSAGetLastError());
+      closesocket(server_socket);
+      WSACleanup();
+      return;
+    }
 
-  if(listen(server_socket, 3) == SOCKET_ERROR) {
+    if(listen(server_socket, 3) == SOCKET_ERROR) {
     printf("Listening failed with error: %d\n",WSAGetLastError());
     closesocket(server_socket);
     WSACleanup();
     return;
-  }
+    }
 
-  printf("Windows-Server running on http://localhost:%d\n",port);
+    printf("Windows-Server running on http://localhost:%d\n",port);
+  #elif defined(__linux__)
+    if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) < 0) {
+      printf("Binding failed with error\n");
+      close(server_socket);
+      return;
+    }
+
+    if(listen(server_socket, 3) < 0){
+      printf("Listening failed with error");
+      close(server_socket);
+      return;
+    }
+
+    printf("Linux-Server running on http://localhost:%d\n",port);
+  #endif
+
   printf("Waiting for connections ...\n\n");
 
   while(1) {
     client_socket = accept(server_socket, (struct sockaddr*)&service,&addrlen);
-    if(client_socket == INVALID_SOCKET) {
-      printf("Accept failed!\n");
-      continue;
-    }
+    
+    #ifdef _WIN32
+      if(client_socket == INVALID_SOCKET) {
+        printf("Accept failed!\n");
+        continue;
+      }
+      
+      int bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1,0);
+      if(bytes_read <= 0) {
+        closesocket(client_socket);
+        continue;
+      }
+    #elif defined(__linux__)
+      if(client_socket < 0) {
+        printf("Accept failed!\n");
+        continue;
+      }
 
-    recv(client_socket, buffer, BUFFER_SIZE - 1,0);
+      ssize_t bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1,0);
+      if(bytes_read <= 0) {
+        close(client_socket);
+        continue;
+      }
+    #endif
+
     printf("Request received:\n\n%s\n\n",buffer);
     
     // CORS Preflight header
@@ -84,7 +156,12 @@ void start_server(int port) {
       send(client_socket,cors_response, strlen(cors_response),0);
       printf("Responded to CORS Preflight!\n\n");
       
-      closesocket(client_socket);
+      #ifdef _WIN32
+        closesocket(client_socket);
+      #elif defined(__linux__)
+        close(client_socket);
+      #endif
+
       memset(buffer,0,BUFFER_SIZE);
       continue;
     }
@@ -163,15 +240,26 @@ void start_server(int port) {
       }
     }
 
-    closesocket(client_socket);
+    #ifdef _WIN32
+      closesocket(client_socket);
+    #elif defined(__linux__)
+      close(client_socket);
+    #endif
+    
     memset(buffer,0,BUFFER_SIZE);
   }
 
-  closesocket(server_socket);
+  #ifdef _WIN32
+    closesocket(server_socket);
+  #elif defined(__linux__)
+    close(server_socket);
+  #endif
 
   free(api_bindings.all_bindings);
 
-  WSACleanup();
+  #ifdef _WIN32
+    WSACleanup();
+  #endif
 }
 
 void bind_get_request(char *request, char *(*func)(char *)) {
@@ -222,7 +310,7 @@ char *get_query_param(const char *buffer, const char *key) {
   }
 
   size_t val_len = val_end - val_start;
-  char *result = calloc(sizeof(val_len + 1), sizeof(char));
+  char *result = calloc(val_len + 1, sizeof(char));
   strncpy(result, val_start, val_len);
   result[val_len] = '\0';
 

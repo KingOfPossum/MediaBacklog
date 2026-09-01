@@ -1,11 +1,15 @@
 CC = gcc
 
 CFLAGS = -g
-LDFLAGS = -lcurl -lws2_32
+LDFLAGS = -lcurl
 
 SRCS = main.c database.c databaseManager.c sqlite3.c api.c igdb_wrapper.c cJSON.c
 OBJS = $(SRCS:.c=.o)
-EXEC = backend
+EXEC = backend.exe
+
+ifeq ($(OS),Windows_NT)
+	LDFLAGS += -lws2_32
+endif
 
 all: $(EXEC)
 
