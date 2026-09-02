@@ -5,10 +5,11 @@ LDFLAGS = -lcurl
 
 SRCS = main.c database.c databaseManager.c sqlite3.c api.c igdb_wrapper.c cJSON.c
 OBJS = $(SRCS:.c=.o)
-EXEC = backend.exe
+EXEC = backend
 
 ifeq ($(OS),Windows_NT)
 	LDFLAGS += -lws2_32
+	EXEF := $(EXEC).exe
 endif
 
 all: $(EXEC)

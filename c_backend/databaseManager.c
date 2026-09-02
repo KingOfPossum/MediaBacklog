@@ -535,6 +535,28 @@ APILibraryGameEntry get_game_from_library_by_name(char *name) {
   return entry;
 }
 
+APILibrary get_library() {
+  sqlite3 *connection = open_connection(db.file_name);
+
+  APILibrary library;
+  select_result *result = select_sql(connection, games_library_table, (char *[]){"id", "game_id"}, 2, NULL, NULL, 0);
+
+  library.num_games = result->num_results;
+  library.games = malloc(library.num_games * sizeof(APILibraryGameEntry));
+
+  for(int i = 0;i < library.num_games; i++) {
+    memset(&library.games[i],0, sizeof(APILibraryGameEntry));
+    
+    int library_id = result->all_results[i].data[0] ? atoi(result->all_results[i].data[0]) : -1;
+    int game_id = result->all_results[i].data[1] ? atoi(result->all_results[i].data[1]) : -1;
+
+    library.games[i] = get_game_from_library_by_id(connection, game_id, library_id);
+  }
+
+  sqlite3_close(connection);
+  return library;
+}
+
 APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status, IGDBEntry game) {
   sqlite3 *connection = open_connection(db.file_name);
   
@@ -614,6 +636,41 @@ void print_APILibraryGameEntry(APILibraryGameEntry library_game) {
   }
   printf("  STATUS: %s\n", library_game.status ? library_game.status : "N/A");
   printf("#############################\n\n");
+}
+
+char *clean_json(char *input) {
+  if(input == NULL) {
+    return strdup("");
+  }
+
+  int len = strlen(input);
+  char *clean_str = calloc(len * 2 + 1, sizeof(char));
+  int j = 0;
+
+  for(int i = 0;i < len;i++) {
+    if(input[i] == '\n') {
+      clean_str[j++] = '\\';
+      clean_str[j++] = 'n';
+    }
+    else if(input[i] == '"') {
+      clean_str[j++] = '\\';
+      clean_str[j++] = '"';
+    }
+    else if(input[i] == '\r') {
+      clean_str[j++] = '\\';
+      clean_str[j++] = 'r';
+    }
+    else if(input[i] == '\t') {
+      clean_str[j++] = '\\';
+      clean_str[j++] = 't';
+    }
+    else {
+      clean_str[j++] = input[i];
+    }
+  }
+  clean_str[j] = '\0';
+
+  return clean_str;
 }
 
 char *APIGameEntry_to_json(APIGameEntry game) {
@@ -698,7 +755,7 @@ char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos) {
     "}",
     igdb_infos.igdb_id,
     igdb_infos.cover_url ? igdb_infos.cover_url : "",
-    igdb_infos.summary ? igdb_infos.summary : "",
+    igdb_infos.summary ? clean_json(igdb_infos.summary) : "",
     genres,
     platforms
   );
@@ -758,6 +815,36 @@ char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry) {
   return json;
 }
 
+char *APILibrary_to_json(APILibrary library) {
+  char *json = calloc(4096, sizeof(char));
+  int current_size = 4096;
+  int current_len = 1;
+
+  json[0] = '[';
+
+  for(int i = 0;i < library.num_games;i++){
+    char *game_json = APILibraryGameEntry_to_json(library.games[i]);
+    current_len += strlen(game_json);
+
+    if(current_len + 3 > current_size) {
+      json = realloc(json, current_len + 3 * sizeof(char));
+      current_size = current_len + 3;
+    }
+
+    strcat(json, game_json);
+    
+    if(i < library.num_games - 1) {
+      strcat(json, ",");
+    }
+
+    free(game_json);
+  }
+
+  strcat(json, "]");
+
+  return json;
+}
+
 void free_APIGameEntry(APIGameEntry *game) {
   if(game->name) {
     free(game->name);
@@ -810,4 +897,11 @@ void free_APILibraryGameEntry(APILibraryGameEntry *entry) {
     }
     free(entry->consoles);
   }
+}
+
+void free_APILibrary(APILibrary *library) {
+  for(int i = 0;i < library->num_games;i++) {
+    free_APILibraryGameEntry(&library->games[i]);
+  }
+  free(library->games);
 }

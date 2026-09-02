@@ -162,6 +162,11 @@ static IGDBEntry parseResult(char *result) {
       cJSON *cover_url = cJSON_GetObjectItemCaseSensitive(cover,"url");
       if(cJSON_IsString(cover_url)) {
         entry.cover_url = strdup(cover_url->valuestring);
+        char *replace = strstr(entry.cover_url,"thumb");
+        
+        if(replace != NULL) {
+          memcpy(replace, "1080p", 5);
+        }
       }
     }
 

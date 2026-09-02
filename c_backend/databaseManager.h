@@ -37,6 +37,11 @@ typedef struct APILibraryGameEntry {
   char *status;
 } APILibraryGameEntry;
 
+typedef struct APILibrary {
+  APILibraryGameEntry *games;
+  int num_games;
+} APILibrary;
+
 int init_database(char *path);
 void close_database();
 
@@ -70,6 +75,7 @@ APIGameEntry get_game(sqlite3 *connection, int game_id, char *name);
 APIIGDBEntry get_igdb_infos(sqlite3 *connection, int igdb_id);
 APILibraryGameEntry get_game_from_library_by_id(sqlite3 *connection, int game_id, int library_id);
 APILibraryGameEntry get_game_from_library_by_name(char *name);
+APILibrary get_library();
 
 void print_APIGameEntry(APIGameEntry game);
 void print_APILibraryGameEntry(APILibraryGameEntry library_game);
@@ -78,9 +84,11 @@ void print_APIIGDBEntry(APIIGDBEntry igdb_entry);
 char *APIGameEntry_to_json(APIGameEntry game);
 char *APIIGDBEntry_to_json(APIIGDBEntry igdb_infos);
 char *APILibraryGameEntry_to_json(APILibraryGameEntry library_entry);
+char *APILibrary_to_json(APILibrary library);
 
 void free_APIGameEntry(APIGameEntry *game);
 void free_APIIGDBEntry(APIIGDBEntry *igdb);
 void free_APILibraryGameEntry(APILibraryGameEntry *entry);
+void free_APILibrary(APILibrary *library);
 
 #endif

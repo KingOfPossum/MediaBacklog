@@ -180,14 +180,12 @@ void start_server(int port) {
       //printf("Checking for binding: %d (%s)\n",i,binding_request);
       if(strncmp(buffer,binding_request,strlen(binding_request)) == 0){
         if(api_bindings.all_bindings[i].type == GET_REQUEST) {
-          char http_response[512];
-          strcpy(http_response,
+          char *header = 
             "HTTP/1.1 200 OK\r\n"
             "Content-Type: application/json\r\n"
             "Access-Control-Allow-Origin: *\r\n"
             "Connection: close\r\n"
-            "\r\n"
-          );
+            "\r\n";
           
           char *end_of_line = strstr(buffer, "\r\n");
           if(end_of_line != NULL) {
@@ -199,16 +197,24 @@ void start_server(int port) {
             char *response = api_bindings.all_bindings[i].get_func(first_line_cpy);
             free(first_line_cpy);
 
-            strcat(http_response,response);
-            
-            send(client_socket,http_response,strlen(http_response),0);
+            send(client_socket, header, strlen(header), 0);
+
+            if(response != NULL) { 
+              send(client_socket,response,strlen(response),0);
+            }
           }
         }
         else if(api_bindings.all_bindings[i].type == POST_REQUEST) {
+          char *header =
+            "HTTP/1.1 200 OK\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Content-Type: application/json\r\n"
+            "Connection: close\r\n"
+            "\r\n";
+
           char *body_start = strstr(buffer,"\r\n\r\n");
           char *response_content = NULL;
           
-
           if(body_start != NULL) {
             char *json = body_start + 4;    
             response_content = api_bindings.all_bindings[i].post_func(json);
@@ -218,20 +224,10 @@ void start_server(int port) {
             response_content = strdup("{\"error\":\"No body found\"}");
           }
 
-          char full_response[2048] = {0};
-          snprintf(full_response, sizeof(full_response),
-            "HTTP/1.1 200 OK\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Content-Type: application/json\r\n"
-            "Connection: close\r\n"
-            "\r\n"
-            "%s",
-            response_content ? response_content : ""
-          );
-
-          send(client_socket,full_response,strlen(full_response),0);
+          send(client_socket,header,strlen(header),0);
 
           if(response_content != NULL) {
+            send(client_socket, response_content, strlen(response_content), 0);
             free(response_content);
           }
         }

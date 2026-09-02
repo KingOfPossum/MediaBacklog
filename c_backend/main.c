@@ -7,6 +7,7 @@
 
 char *get_new_game(char *json);
 char *get_game_func(char *request);
+char *get_library_func(char *request);
 
 int main(int argc, char *argv[]) {
   printf("--------------Database------------\n");
@@ -27,6 +28,7 @@ int main(int argc, char *argv[]) {
   printf("--------------Server--------------\n");
 
   bind_get_request("/getGame", get_game_func);
+  bind_get_request("/getLibrary", get_library_func);
   bind_post_request("/game",get_new_game);
 
   start_server(1234);
@@ -82,4 +84,15 @@ char *get_game_func(char *request) {
   printf("%s\n",json);
 
   return json;
+}
+
+char *get_library_func(char *request) {
+  APILibrary library = get_library();
+
+  char *json = APILibrary_to_json(library);
+
+  free_APILibrary(&library);
+
+  return json;
+
 }
