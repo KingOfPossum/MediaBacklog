@@ -5,16 +5,26 @@
 
 #ifdef _WIN32
   #include <winsock2.h>
+
+  #define socketType SOCKET
+  #define close_socket closesocket
 #elif defined (__linux__)
   #include <sys/socket.h>
   #include <netinet/in.h>
   #include <arpa/inet.h>
   #include <unistd.h>
+
+  #define socketType int
+  #define close_socket close
 #endif
 
 #define BUFFER_SIZE 2048
 
 bindings api_bindings;
+
+static void handle_get_request_binding(char *request, socketType client_socket, binding get_binding);
+static void handle_post_request_binding(char *request, socketType client_socket, binding post_binding);
+static void handle_cors_preflight(socketType client_socket);
 
 void init_server() {
   memset(&api_bindings,0,sizeof(bindings));
@@ -28,7 +38,6 @@ void start_server(int port) {
     int addrlen = sizeof(service);
 
     WSADATA wsadata;
-    SOCKET server_socket, client_socket;
     int wsaerr;
     
     WORD wVersionRequested = MAKEWORD(2,2);
@@ -44,10 +53,10 @@ void start_server(int port) {
   
     server_socket = INVALID_SOCKET;
   #elif defined(__linux__)
-    int server_socket, client_socket;
     socklen_t addrlen = sizeof(service);
   #endif
-
+  
+  socketType server_socket, client_socket;
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
   
   #ifdef _WIN32
@@ -71,7 +80,7 @@ void start_server(int port) {
     int opt = 1;
     if(setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
       printf("Error: setsockopt\n");
-      close(server_socket);
+      close_socket(server_socket);
       return;
     }
   #endif
@@ -83,14 +92,14 @@ void start_server(int port) {
   #ifdef _WIN32
     if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) == SOCKET_ERROR) {
       printf("Binding failed with error: %d\n",WSAGetLastError());
-      closesocket(server_socket);
+      close_socket(server_socket);
       WSACleanup();
       return;
     }
 
     if(listen(server_socket, 3) == SOCKET_ERROR) {
     printf("Listening failed with error: %d\n",WSAGetLastError());
-    closesocket(server_socket);
+    close_socket(server_socket);
     WSACleanup();
     return;
     }
@@ -99,13 +108,13 @@ void start_server(int port) {
   #elif defined(__linux__)
     if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) < 0) {
       printf("Binding failed with error\n");
-      close(server_socket);
+      close_socket(server_socket);
       return;
     }
 
     if(listen(server_socket, 3) < 0){
       printf("Listening failed with error");
-      close(server_socket);
+      close_socket(server_socket);
       return;
     }
 
@@ -124,10 +133,6 @@ void start_server(int port) {
       }
       
       int bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1,0);
-      if(bytes_read <= 0) {
-        closesocket(client_socket);
-        continue;
-      }
     #elif defined(__linux__)
       if(client_socket < 0) {
         printf("Accept failed!\n");
@@ -135,32 +140,20 @@ void start_server(int port) {
       }
 
       ssize_t bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1,0);
-      if(bytes_read <= 0) {
-        close(client_socket);
-        continue;
-      }
     #endif
+
+    if(bytes_read <= 0) {
+      close_socket(client_socket);
+      continue;
+    }
 
     printf("Request received:\n\n%s\n\n",buffer);
     
     // CORS Preflight header
     if(strncmp(buffer, "OPTIONS",7) == 0) {
-      char *cors_response = 
-        "HTTP/1.1 204 No Content\r\n"
-        "Access-Control-Allow-Origin: *\r\n"
-        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
-        "Access-Control-Allow-Headers: Content-Type\r\n"
-        "Connection: close\r\n"
-        "\r\n";
-
-      send(client_socket,cors_response, strlen(cors_response),0);
-      printf("Responded to CORS Preflight!\n\n");
+      handle_cors_preflight(client_socket);
       
-      #ifdef _WIN32
-        closesocket(client_socket);
-      #elif defined(__linux__)
-        close(client_socket);
-      #endif
+      close_socket(client_socket);
 
       memset(buffer,0,BUFFER_SIZE);
       continue;
@@ -180,76 +173,22 @@ void start_server(int port) {
       //printf("Checking for binding: %d (%s)\n",i,binding_request);
       if(strncmp(buffer,binding_request,strlen(binding_request)) == 0){
         if(api_bindings.all_bindings[i].type == GET_REQUEST) {
-          char *header = 
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: application/json\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-          
-          char *end_of_line = strstr(buffer, "\r\n");
-          if(end_of_line != NULL) {
-            size_t first_line_len = end_of_line - buffer;
-
-            char *first_line_cpy = calloc(first_line_len + 1, sizeof(char));
-            strncpy(first_line_cpy, buffer, first_line_len);
-
-            char *response = api_bindings.all_bindings[i].get_func(first_line_cpy);
-            free(first_line_cpy);
-
-            send(client_socket, header, strlen(header), 0);
-
-            if(response != NULL) { 
-              send(client_socket,response,strlen(response),0);
-            }
-          }
+          handle_get_request_binding(buffer, client_socket, api_bindings.all_bindings[i]);
         }
         else if(api_bindings.all_bindings[i].type == POST_REQUEST) {
-          char *header =
-            "HTTP/1.1 200 OK\r\n"
-            "Access-Control-Allow-Origin: *\r\n"
-            "Content-Type: application/json\r\n"
-            "Connection: close\r\n"
-            "\r\n";
-
-          char *body_start = strstr(buffer,"\r\n\r\n");
-          char *response_content = NULL;
-          
-          if(body_start != NULL) {
-            char *json = body_start + 4;    
-            response_content = api_bindings.all_bindings[i].post_func(json);
-          } 
-          else {
-            printf("ERROR: Couldn't find body\n");
-            response_content = strdup("{\"error\":\"No body found\"}");
-          }
-
-          send(client_socket,header,strlen(header),0);
-
-          if(response_content != NULL) {
-            send(client_socket, response_content, strlen(response_content), 0);
-            free(response_content);
-          }
+          handle_post_request_binding(buffer, client_socket, api_bindings.all_bindings[i]);
         }
         
         break;
       }
     }
 
-    #ifdef _WIN32
-      closesocket(client_socket);
-    #elif defined(__linux__)
-      close(client_socket);
-    #endif
+    close_socket(client_socket);
     
     memset(buffer,0,BUFFER_SIZE);
   }
 
-  #ifdef _WIN32
-    closesocket(server_socket);
-  #elif defined(__linux__)
-    close(server_socket);
-  #endif
+  close_socket(server_socket);
 
   free(api_bindings.all_bindings);
 
@@ -274,6 +213,74 @@ void bind_post_request(char *request, char *(*func)(char *)) {
   api_bindings.all_bindings[api_bindings.num_bindings-1].request = request;
   api_bindings.all_bindings[api_bindings.num_bindings-1].post_func = func;
   api_bindings.all_bindings[api_bindings.num_bindings-1].type = POST_REQUEST;
+}
+
+static void handle_get_request_binding(char *request, socketType client_socket, binding get_binding) {
+  char *header = 
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: application/json\r\n"
+            "Access-Control-Allow-Origin: *\r\n"
+            "Connection: close\r\n"
+            "\r\n";
+          
+  char *end_of_line = strstr(request, "\r\n");
+  if(end_of_line != NULL) {
+    size_t first_line_len = end_of_line - request;
+
+    char *first_line_cpy = calloc(first_line_len + 1, sizeof(char));
+    strncpy(first_line_cpy, request, first_line_len);
+
+    char *response = get_binding.get_func(first_line_cpy);
+    free(first_line_cpy);
+
+    send(client_socket, header, strlen(header), 0);
+
+    if(response != NULL) { 
+      send(client_socket,response,strlen(response),0);
+      free(response);
+    }
+  }
+}
+
+static void handle_post_request_binding(char *request, socketType client_socket, binding post_binding) {
+  char *header =
+    "HTTP/1.1 200 OK\r\n"
+    "Access-Control-Allow-Origin: *\r\n"
+    "Content-Type: application/json\r\n"
+    "Connection: close\r\n"
+    "\r\n";
+
+  char *body_start = strstr(request,"\r\n\r\n");
+  char *response_content = NULL;
+
+  if(body_start != NULL) {
+    char *json = body_start + 4;    
+    response_content = post_binding.post_func(json);
+  } 
+  else {
+    printf("ERROR: Couldn't find body\n");
+    response_content = strdup("{\"error\":\"No body found\"}");
+  }
+
+  send(client_socket,header,strlen(header),0);
+
+  if(response_content != NULL) {
+    send(client_socket, response_content, strlen(response_content), 0);
+    free(response_content);
+  }
+}
+
+static void handle_cors_preflight(socketType client_socket) {
+  char *cors_response = 
+        "HTTP/1.1 204 No Content\r\n"
+        "Access-Control-Allow-Origin: *\r\n"
+        "Access-Control-Allow-Methods: POST, GET, OPTIONS\r\n"
+        "Access-Control-Allow-Headers: Content-Type\r\n"
+        "Connection: close\r\n"
+        "\r\n";
+
+  send(client_socket,cors_response, strlen(cors_response),0);
+  printf("Responded to CORS Preflight!\n\n");
 }
 
 void decode_url(char *url) {

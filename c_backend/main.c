@@ -54,7 +54,7 @@ char *get_new_game(char *json) {
   if(new_game.igdb_id == -1) {
     printf("Game not found by IGDB :(\n");
     printf("----------------------------------\n\n");
-    return "NO GAME FOUND";
+    return strdup("NO GAME FOUND");
   }
 
   APILibraryGameEntry library_game = add_game_to_library(game_name,platform,status,new_game);

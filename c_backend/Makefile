@@ -1,7 +1,7 @@
 CC = gcc
 
-CFLAGS = -g
-LDFLAGS = -lcurl
+CFLAGS = -g -fsanitize=address
+LDFLAGS = -lcurl -fsanitize=address
 
 SRCS = main.c database.c databaseManager.c sqlite3.c api.c igdb_wrapper.c cJSON.c
 OBJS = $(SRCS:.c=.o)

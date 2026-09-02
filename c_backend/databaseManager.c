@@ -826,9 +826,9 @@ char *APILibrary_to_json(APILibrary library) {
     char *game_json = APILibraryGameEntry_to_json(library.games[i]);
     current_len += strlen(game_json);
 
-    if(current_len + 3 > current_size) {
-      json = realloc(json, current_len + 3 * sizeof(char));
-      current_size = current_len + 3;
+    if(current_len * 2 > current_size) {
+      json = realloc(json, current_len *2 * sizeof(char));
+      current_size = current_len * 2;
     }
 
     strcat(json, game_json);
