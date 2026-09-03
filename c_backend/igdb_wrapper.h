@@ -1,6 +1,12 @@
 #ifndef IGDB_WRAPPER
 #define IGDB_WRAPPER
 
+typedef struct IGDBTimeEntry {
+  int hastily;
+  int normally;
+  int completely;
+} IGDBTimeEntry;
+
 typedef struct IGDBEntry {
   int igdb_id;
   char *game_name;
@@ -11,6 +17,7 @@ typedef struct IGDBEntry {
   int num_platforms;
   char **genres;
   int num_genres;
+  IGDBTimeEntry times;
 } IGDBEntry;
 
 IGDBEntry getGame(char *game_name, char *platform);

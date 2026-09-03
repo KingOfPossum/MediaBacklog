@@ -11,6 +11,7 @@ const char *API_URL = "https://api.igdb.com/v4/";
 static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
 static char *construct_url(char *endpoint);
 static char *construct_query(char *game_name, char *platform);
+static char *construct_time_query(int igdb_id);
 static char *make_request(char *url, char *query);
 static IGDBEntry parseResult(char *result);
 
@@ -59,7 +60,7 @@ static char *construct_query(char *game_name, char *platform) {
   
   if(platform) {
     snprintf(query,512,
-    "fields name,url,platforms.name,genres.name,cover.url,summary; "
+    "fields name,url,platforms.name,genres.name,cover.url,summary;"
     "where name ~ *\"%s\"* & (platforms.name ~ *\"%s\"* | platforms.abbreviation ~ *\"%s\"*); "
     "sort rating desc; limit 1; ",
     game_name, platform, platform
@@ -74,6 +75,23 @@ static char *construct_query(char *game_name, char *platform) {
   }
  
   return query;  
+}
+
+static char *construct_time_query(int igdb_id) {
+  char *query = malloc(512);
+
+  if(query == NULL) {
+    return NULL;
+  }
+  
+  snprintf(query, 512,
+    "fields hastily, normally, completely;"
+    "where game_id = %d;"
+    "limit 1;",
+    igdb_id
+  );
+
+  return query;
 }
 
 static char *make_request(char *url, char *query) {
@@ -230,6 +248,45 @@ static IGDBEntry parseResult(char *result) {
   return entry;
 }
 
+static IGDBTimeEntry parseTimeResult(char *result) {
+  IGDBTimeEntry entry;
+  entry.hastily = -1;
+  entry.normally = -1;
+  entry.completely = -1;
+
+  cJSON *json = cJSON_Parse(result);
+  if(json == NULL) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if(error_ptr != NULL) {
+      printf("Error: %s\n",error_ptr);
+    }
+    cJSON_Delete(json);
+    return entry;
+  }
+
+  if(cJSON_IsArray(json)) {
+    cJSON *time_entry = cJSON_GetArrayItem(json,0);
+
+    cJSON *hastily = cJSON_GetObjectItemCaseSensitive(time_entry, "hastily");
+    if(hastily && cJSON_IsNumber(hastily)) {
+      entry.hastily = hastily->valueint;
+    }
+
+    cJSON *normally = cJSON_GetObjectItemCaseSensitive(time_entry, "normally");
+    if(normally && cJSON_IsNumber(normally)) {
+      entry.normally = normally->valueint;
+    }
+
+    cJSON *completely = cJSON_GetObjectItemCaseSensitive(time_entry, "completely");
+    if(completely && cJSON_IsNumber(completely)) {
+      entry.completely = completely->valueint;
+    }
+  }
+  
+  cJSON_Delete(json);
+  return entry;
+}
+
 void free_entry(IGDBEntry *entry) {
   free(entry->cover_url);
   free(entry->game_name);
@@ -248,12 +305,19 @@ IGDBEntry getGame(char *game_name, char *platform) {
 
   char *url = construct_url("games");
   char *query = construct_query(game_name,platform);
-
   char *result = make_request(url,query);
   
   if(result != NULL) {
     entry = parseResult(result);
   }
+  
+  char *times_url = construct_url("game_time_to_beats");
+  char *times_query = construct_time_query(entry.igdb_id);
+
+  result = make_request(times_url, times_query);
+  IGDBTimeEntry time_entry = parseTimeResult(result);
+
+  memcpy(&entry.times, &time_entry, sizeof(IGDBTimeEntry));
 
   free(url);
   free(query);
@@ -285,5 +349,9 @@ void print_entry(IGDBEntry entry) {
   for(int i = 0;i < entry.num_genres;i++) {
     printf("    -%s\n",entry.genres[i]);
   }
+  printf("Times:\n");
+  printf("  Hastily: %d\n",entry.times.hastily);
+  printf("  Normally: %d\n",entry.times.normally);
+  printf("  Completely: %d\n",entry.times.completely);
   printf("\n");
 }

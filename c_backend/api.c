@@ -147,8 +147,16 @@ void start_server(int port) {
       continue;
     }
 
+    // Filter favicon requests to make output cleaner
+    if(strncmp(buffer, "GET /favicon.ico", 16) == 0) {
+      char *response = "HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n";
+      send(client_socket, response, strlen(response), 0);
+      close_socket(client_socket);
+      continue;
+    }
+
     printf("Request received:\n\n%s\n\n",buffer);
-    
+
     // CORS Preflight header
     if(strncmp(buffer, "OPTIONS",7) == 0) {
       handle_cors_preflight(client_socket);

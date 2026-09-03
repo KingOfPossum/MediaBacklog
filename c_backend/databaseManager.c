@@ -123,18 +123,28 @@ int game_exists(sqlite3 *connection, char *name) {
 
 int add_game(sqlite3 *connection, char *name, IGDBEntry igdb_entry) {  
   char igdb_id_str[16];
-  snprintf(igdb_id_str,sizeof(igdb_id_str),"%d",igdb_entry.igdb_id);
+  char main_story_str[16];
+  char main_extra_str[16];
+  char completionist_str[16];
 
-  insert_sql(connection, games_table, (char *[]){"name","igdb_id"}, 2, (char *[]){name, igdb_id_str},2);
+  snprintf(igdb_id_str,sizeof(igdb_id_str),"%d",igdb_entry.igdb_id);
+  snprintf(main_story_str,sizeof(main_story_str),"%d",igdb_entry.times.hastily);
+  snprintf(main_extra_str,sizeof(main_extra_str),"%d",igdb_entry.times.normally);
+  snprintf(completionist_str,sizeof(completionist_str),"%d",igdb_entry.times.completely);
+
+  insert_sql(connection, games_table, (char *[]){"name","igdb_id","main_story_length","main_extra_length","completionist_length"}, 5, (char *[]){name, igdb_id_str, main_story_str, main_extra_str, completionist_str},5);
 
   int game_id = game_exists(connection, name);
 
-  if(igdb_game_exists(connection, igdb_entry)) {
-    printf("=> IGDB game already in database!\n");
-    return game_id;
+  if(igdb_entry.igdb_id != -1) {
+    if(igdb_game_exists(connection, igdb_entry)) {
+      printf("=> IGDB game already in database!\n");
+      return game_id;
+    }
+    printf("=> IGDB game not in database\nNow adding IGDB game to database...\n");
+    igdb_add_game(connection, igdb_entry);
   }
-  printf("=> IGDB game not in database\nNow adding IGDB game to database...\n");
-  igdb_add_game(connection, igdb_entry);
+
   return game_id;
 }
 
@@ -560,10 +570,11 @@ APILibrary get_library() {
 APILibraryGameEntry add_game_to_library(char *name, char *platform, char *status, IGDBEntry game) {
   sqlite3 *connection = open_connection(db.file_name);
   
-  int game_id = game_exists(connection, name);
+  char *game_name = game.igdb_id == -1 ? name : game.game_name;
+  int game_id = game_exists(connection, game_name);
   if(game_id == -1) {
     printf("=> Game not in database!\nNow adding game to database...\n");
-    game_id = add_game(connection, name,game);    
+    game_id = add_game(connection, game_name, game);    
   }
   else {
     printf("=> Game is already in database!\n");
