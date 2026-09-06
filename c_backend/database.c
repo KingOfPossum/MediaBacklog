@@ -124,6 +124,66 @@ void insert_sql(sqlite3 *connection, database_table table, char **columns, int n
   sqlite3_finalize(stmt);
 }
 
+void update_sql(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values, char *where, char **params, int num_params) {
+  if(num_columns != num_values) {
+    printf("Error: provided number of columns different than number of provided values!\n");
+    return;
+  }
+  
+  if(num_columns == 0) {
+    return;
+  }
+  
+  char update_cmd[512] = "UPDATE ";
+  strcat(update_cmd, table.table_name);
+  strcat(update_cmd, " SET ");
+
+  for(int i = 0;i < num_columns;i++) {
+    strcat(update_cmd, columns[i]);
+    strcat(update_cmd,"=?");
+    
+    if(i < num_columns-1){
+      strcat(update_cmd, ",");
+    }
+  }
+
+  if(where != NULL) {
+    strcat(update_cmd, " WHERE ");
+    strcat(update_cmd, where);
+  }
+  
+  strcat(update_cmd, ";");
+
+  sqlite3_stmt *stmt;
+  int x = sqlite3_prepare_v2(connection, update_cmd, -1, &stmt, 0);
+
+  printf("Compiled statement: %s\n", update_cmd);
+
+  if(x != SQLITE_OK) {
+    printf("ERROR PREPARE: %s\n", sqlite3_errmsg(connection));
+    sqlite3_finalize(stmt);
+
+    return;
+  }
+
+  for(int i = 0;i < num_values;i++) {
+    sqlite3_bind_text(stmt, i+1, values[i], -1, SQLITE_TRANSIENT);
+  }
+  for(int i = 0;i < num_params;i++) {
+    sqlite3_bind_text(stmt, num_values + i + 1, params[i], -1, SQLITE_TRANSIENT);
+  }
+
+  x = sqlite3_step(stmt);
+  if(x != SQLITE_DONE) {
+    printf("ERROR EXECUTE: %s\n", sqlite3_errmsg(connection));
+    sqlite3_finalize(stmt);
+
+    return;
+  }
+
+  sqlite3_finalize(stmt);
+}
+
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params) {
   // build the select cmd
   char select_cmd[512] = "SELECT ";

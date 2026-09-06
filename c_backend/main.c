@@ -16,7 +16,6 @@ int main(int argc, char *argv[]) {
 
   printf("----------------------------------\n\n");
 
-
   printf("--------------IGDB TEST-----------\n");
 
   IGDBEntry game = getGame("Skyrim","PC");
