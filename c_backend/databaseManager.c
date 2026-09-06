@@ -98,7 +98,7 @@ int init_database(char *path) {
   init_database_tables(connection,db);
 
   printf("Initialized database tables\n");
-
+  
   sqlite3_close(connection);
   return 0;
 }

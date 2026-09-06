@@ -184,6 +184,44 @@ void update_sql(sqlite3 *connection, database_table table, char **columns, int n
   sqlite3_finalize(stmt);
 }
 
+void delete_sql(sqlite3 *connection, database_table table, char *where, char **params, int num_params) {
+  char delete_cmd[512] = "DELETE FROM ";
+  strcat(delete_cmd, table.table_name);
+  
+  if(where != NULL) {
+    strcat(delete_cmd, " WHERE ");
+    strcat(delete_cmd, where);
+  }
+
+  strcat(delete_cmd, ";");
+
+  sqlite3_stmt *stmt;
+  int x = sqlite3_prepare_v2(connection, delete_cmd, -1, &stmt, 0);
+
+  printf("Compiled statement: %s\n", delete_cmd);
+
+  if(x != SQLITE_OK) {
+    printf("ERROR PREPARE: %s\n", sqlite3_errmsg(connection));
+    sqlite3_finalize(stmt);
+    return;
+  }
+
+  for(int i = 0;i < num_params;i++) {
+    sqlite3_bind_text(stmt, i+1, params[i], -1, SQLITE_TRANSIENT);
+  }
+
+  x = sqlite3_step(stmt);
+
+  if(x != SQLITE_DONE) {
+    printf("ERROR EXECUTE: %s\n", sqlite3_errmsg(connection));
+    sqlite3_finalize(stmt);
+
+    return;
+  }
+
+  sqlite3_finalize(stmt);  
+}
+
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params) {
   // build the select cmd
   char select_cmd[512] = "SELECT ";

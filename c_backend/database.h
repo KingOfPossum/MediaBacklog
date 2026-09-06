@@ -31,6 +31,7 @@ void init_database_tables(sqlite3 *connection, database db);
 void create_table(sqlite3 *connection, database_table table);
 void insert_sql(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values);
 void update_sql(sqlite3 *connection, database_table table, char **columns, int num_columns, char **values, int num_values, char *where, char **params, int num_params);
+void delete_sql(sqlite3 *connection, database_table table, char *where, char **params, int num_params);
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params);
 void free_select_results(select_result *results);
 void print_select_results(select_result results);
