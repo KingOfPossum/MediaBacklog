@@ -111,8 +111,14 @@ static char *make_request(char *url, char *query) {
 
     struct curl_slist *headers = NULL;
 
-    headers = curl_slist_append(headers, "Client-ID: m4nkh7koxu6lq6ndaj4bzs3n1148l5");
-    headers = curl_slist_append(headers, "Authorization: Bearer rj6vnmvto0non59us71cglnb4fdhn1");
+    char client_id[128];
+    char access_token[128];
+
+    snprintf(client_id, sizeof(client_id), "Client-ID: %s", getenv("IGDB_CLIENT_ID") ? getenv("IGDB_CLIENT_ID") : "");
+    snprintf(access_token, sizeof(access_token), "Authorization: Bearer %s", getenv("IGDB_ACCESS_TOKEN") ? getenv("IGDB_ACCESS_TOKEN") : "");
+
+    headers = curl_slist_append(headers, client_id);
+    headers = curl_slist_append(headers, access_token);
     headers = curl_slist_append(headers, "Accept: application/json");
 
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
