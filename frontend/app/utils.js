@@ -1,14 +1,11 @@
-export function makeHTTPGetRequest(url) {
-  return new Promise((resolve) => {
-    const request = new XMLHttpRequest();
+export async function makeHTTPGetRequest(url) {
+  const response = await fetch(url);
 
-    request.addEventListener('load',() => {
-      resolve(JSON.parse(request.response));
-    });
+  if (!response.ok) {
+    throw new Error(`HTTP-Error: ${response.status}`);
+  }
 
-    request.open('GET',url);
-    request.send();
-  });
+  return await response.json();
 }
 
 export async function makeHTTPPostRequest(url, data) {
@@ -23,8 +20,11 @@ export async function makeHTTPPostRequest(url, data) {
       },
       body: JSON.stringify(data)
     });
+
+    return await response.json();
   }
   catch (error) {
     console.error("Error during POST request:", error);
+    return {"error":"Server error"};
   }
 }
