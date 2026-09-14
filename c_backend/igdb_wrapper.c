@@ -1,0 +1,288 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "cJSON.h"
+
+#if defined(ESP32) || defined(ESP_PLATFORM)
+  #include "esp32_http.h"
+  #define make_igdb_request esp32_make_igdb_request
+#else
+  #include "curl_http.h"
+  #define make_igdb_request curl_make_igdb_request
+#endif
+
+#include "igdb_wrapper.h"
+
+const char *API_URL = "https://api.igdb.com/v4/";
+
+static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp);
+static char *construct_url(char *endpoint);
+static char *construct_query(char *game_name, char *platform);
+static char *construct_time_query(int igdb_id);
+static IGDBEntry parseResult(char *result);
+
+static char *construct_url(char *endpoint) {
+  size_t length = strlen(API_URL) + strlen(endpoint) + 1;
+  char *url = malloc(length);
+  if(url == NULL) {
+    return NULL;
+  }
+
+  strcpy(url,API_URL);
+  strcat(url,endpoint);
+
+  return url;
+}
+
+static char *construct_query(char *game_name, char *platform) {
+  char *query = malloc(512);
+
+  if(query == NULL) {
+    return NULL;
+  }
+  
+  if(platform) {
+    snprintf(query,512,
+    "fields name,url,platforms.name,genres.name,cover.url,summary;"
+    "where name ~ *\"%s\"* & (platforms.name ~ *\"%s\"* | platforms.abbreviation ~ *\"%s\"*); "
+    "sort rating desc; limit 1; ",
+    game_name, platform, platform
+    );
+  }
+  else {
+    snprintf(query,512,
+    "fields name,url,platforms.name,genres.name,cover.url,summary; "
+    "where name ~ *\"%s\"*; ",
+    game_name
+    );
+  }
+ 
+  return query;  
+}
+
+static char *construct_time_query(int igdb_id) {
+  char *query = malloc(512);
+
+  if(query == NULL) {
+    return NULL;
+  }
+  
+  snprintf(query, 512,
+    "fields hastily, normally, completely;"
+    "where game_id = %d;"
+    "limit 1;",
+    igdb_id
+  );
+
+  return query;
+}
+
+static IGDBEntry parseResult(char *result) {  
+  //printf("%s\n\n",result);
+  IGDBEntry entry;
+
+  memset(&entry,0,sizeof(IGDBEntry));
+  entry.igdb_id = -1;
+  entry.num_platforms = 0;
+  entry.num_genres = 0;
+
+  cJSON *json = cJSON_Parse(result);
+  if(json == NULL) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if(error_ptr != NULL) {
+      printf("Error: %s\n",error_ptr);
+    }
+    cJSON_Delete(json);
+    return entry;
+  }
+
+  if(cJSON_IsArray(json)) {
+    cJSON *game = cJSON_GetArrayItem(json,0);
+
+    cJSON *id = cJSON_GetObjectItemCaseSensitive(game,"id");
+    if(id && cJSON_IsNumber(id)) {
+      entry.igdb_id = id->valueint;
+    }
+
+    cJSON *name = cJSON_GetObjectItemCaseSensitive(game,"name");
+    if(name && cJSON_IsString(name)) {
+      entry.game_name = strdup(name->valuestring);
+    }
+
+    cJSON *url = cJSON_GetObjectItemCaseSensitive(game,"url");
+    if(url && cJSON_IsString(url)) {
+      entry.url = strdup(url->valuestring);
+    }
+
+    cJSON *cover = cJSON_GetObjectItemCaseSensitive(game,"cover");
+    if(cover && cJSON_IsObject(cover)) {
+      cJSON *cover_url = cJSON_GetObjectItemCaseSensitive(cover,"url");
+      if(cJSON_IsString(cover_url)) {
+        entry.cover_url = strdup(cover_url->valuestring);
+        char *replace = strstr(entry.cover_url,"thumb");
+        
+        if(replace != NULL) {
+          memcpy(replace, "1080p", 5);
+        }
+      }
+    }
+
+    cJSON *summary = cJSON_GetObjectItemCaseSensitive(game,"summary");
+    if(summary && cJSON_IsString(summary)) {
+      entry.summary = strdup(summary->valuestring);
+    }
+
+    cJSON *platforms = cJSON_GetObjectItemCaseSensitive(game,"platforms");
+    if(platforms && cJSON_IsArray(platforms)) {
+      int num_platforms = cJSON_GetArraySize(platforms);
+      entry.num_platforms = num_platforms;
+      entry.platforms = malloc(num_platforms * sizeof(char *));
+
+      for(int i = 0;i < num_platforms;i++) {
+        cJSON *platform = cJSON_GetArrayItem(platforms,i);
+        
+        entry.platforms[i] = NULL;
+
+        if(platform && cJSON_IsObject(platform)) {
+          cJSON *platform_name = cJSON_GetObjectItemCaseSensitive(platform,"name");
+          
+          if(platform_name && cJSON_IsString(platform_name)) {
+            entry.platforms[i] = strdup(platform_name->valuestring);
+          }
+        }
+      }
+    }
+
+    cJSON *genres = cJSON_GetObjectItemCaseSensitive(game,"genres");
+    if(genres && cJSON_IsArray(genres)) {
+      int num_genres = cJSON_GetArraySize(genres);
+      entry.num_genres = num_genres;
+      entry.genres = malloc(num_genres * sizeof(char *));
+
+      for(int i = 0;i < num_genres;i++) {
+        cJSON *genre = cJSON_GetArrayItem(genres,i);
+
+        entry.genres[i] = NULL;
+
+        if(genre && cJSON_IsObject(genre)) {
+          cJSON *genre_name = cJSON_GetObjectItemCaseSensitive(genre,"name");
+
+          if(genre_name && cJSON_IsString(genre_name)) {
+            entry.genres[i] = strdup(genre_name->valuestring);
+          }
+        }
+      }
+    }
+  }
+  else if(cJSON_IsObject(json)) {
+    cJSON *msg = cJSON_GetObjectItemCaseSensitive(json,"message");
+    if(msg && cJSON_IsString(msg)) {
+      if(strcmp(msg->valuestring,"Authorization Failure. Have you tried:") == 0) {
+        printf("ERROR: Authentication failed!\n");
+      }
+    }
+  }
+  
+  cJSON_Delete(json);
+  return entry;
+}
+
+static IGDBTimeEntry parseTimeResult(char *result) {
+  IGDBTimeEntry entry;
+  entry.hastily = -1;
+  entry.normally = -1;
+  entry.completely = -1;
+
+  cJSON *json = cJSON_Parse(result);
+  if(json == NULL) {
+    const char *error_ptr = cJSON_GetErrorPtr();
+    if(error_ptr != NULL) {
+      printf("Error: %s\n",error_ptr);
+    }
+    cJSON_Delete(json);
+    return entry;
+  }
+
+  if(cJSON_IsArray(json)) {
+    cJSON *time_entry = cJSON_GetArrayItem(json,0);
+
+    cJSON *hastily = cJSON_GetObjectItemCaseSensitive(time_entry, "hastily");
+    if(hastily && cJSON_IsNumber(hastily)) {
+      entry.hastily = hastily->valueint;
+    }
+
+    cJSON *normally = cJSON_GetObjectItemCaseSensitive(time_entry, "normally");
+    if(normally && cJSON_IsNumber(normally)) {
+      entry.normally = normally->valueint;
+    }
+
+    cJSON *completely = cJSON_GetObjectItemCaseSensitive(time_entry, "completely");
+    if(completely && cJSON_IsNumber(completely)) {
+      entry.completely = completely->valueint;
+    }
+  }
+  
+  cJSON_Delete(json);
+  return entry;
+}
+
+void free_entry(IGDBEntry *entry) {
+  free(entry->cover_url);
+  free(entry->game_name);
+  free(entry->url);
+  
+  for(int i = 0;i < entry->num_platforms;i++) {
+    free(entry->platforms[i]);
+  }
+  free(entry->platforms);
+}
+
+IGDBEntry getGame(char *game_name, char *platform) {
+  IGDBEntry entry;
+  memset(&entry,0,sizeof(IGDBEntry));
+  entry.igdb_id = -1;
+
+  char *url = construct_url("games");
+  char *query = construct_query(game_name,platform);
+  char *result = make_igdb_request(url,query);
+  
+  if(result != NULL) {
+    entry = parseResult(result);
+  }
+  
+  char *times_url = construct_url("game_time_to_beats");
+  char *times_query = construct_time_query(entry.igdb_id);
+
+  result = make_igdb_request(times_url, times_query);
+  IGDBTimeEntry time_entry = parseTimeResult(result);
+
+  memcpy(&entry.times, &time_entry, sizeof(IGDBTimeEntry));
+
+  free(url);
+  free(query);
+  free(result);
+
+  return entry;
+}
+
+void print_entry(IGDBEntry entry) {
+  printf("\nIGDB Game Entry:\n");
+  printf("  ID: %d\n",entry.igdb_id);
+  printf("  Name: %s\n",entry.game_name ? entry.game_name : "N/A");
+  printf("  URL: %s\n",entry.url ? entry.url : "N/A");
+  printf("  Cover: %s\n",entry.cover_url ? entry.cover_url : "N/A");
+  printf("  Summary: %.150s...\n",entry.summary ? entry.summary : "N/A");
+  printf("  Platforms:\n");
+  for(int i = 0;i < entry.num_platforms;i++) {
+    printf("    -%s\n",entry.platforms[i] ? entry.platforms[i] : "N/A");
+  }
+  printf("  Genres:\n");
+  for(int i = 0;i < entry.num_genres;i++) {
+    printf("    -%s\n",entry.genres[i] ? entry.genres[i] : "N/A");
+  }
+  printf("Times:\n");
+  printf("  Hastily: %d\n",entry.times.hastily);
+  printf("  Normally: %d\n",entry.times.normally);
+  printf("  Completely: %d\n",entry.times.completely);
+  printf("\n");
+}

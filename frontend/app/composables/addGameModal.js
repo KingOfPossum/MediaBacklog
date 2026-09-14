@@ -1,5 +1,5 @@
 import {games} from "~/data/gameData"
-import {makeHTTPRequest} from "~/utils"
+import {makeHTTPGetRequest, makeHTTPPostRequest} from "~/utils"
 
 export const addGameModal = () => {
   const addGameName = useState('addGameName',() => '');
@@ -9,26 +9,27 @@ export const addGameModal = () => {
   const loading_request = useState('loading_request',() => false);
 
   const addGame = async () => {
-    if(games.value.some(game => game.name.toLowerCase() === addGameName.value.toLowerCase())){
-      games.value.forEach((game) => {
-        if(game.name.toLowerCase().replace(' ','') === addGameName.value.toLowerCase().replace(' ','')) {
-          if(game.platforms.includes(platformSelect.value) === false){
-            game.platforms.push(platformSelect.value);
-          }
-        }
-      })
+    const data = {'game':addGameName.value, 'platform':platformSelect.value, 'status':statusSelect.value};
+    const game_data = await makeHTTPPostRequest('http://localhost:1234/game',data);
+
+    if(game_data === undefined || game_data['error']) {
+      return;
+    }
+
+    const existing_game = games.value.find(game => game.name === game_data['game_infos']['name']);
+
+    if(existing_game) {
+      existing_game['platforms'] = game_data['consoles'];
     }
     else {
-      loading_request.value = true;
-      const result = await(makeHTTPRequest(`http://127.0.0.1:5049/games/${addGameName.value}_${platformSelect.value}_${statusSelect.value}`))
       games.value.push({
-        id:games.value.length+1,
-        name: addGameName.value,
-        platforms:[platformSelect.value],
-        status:statusSelect.value,
-        img: result['game']
-      })
-      loading_request.value = false;
+        id: game_data['library_id'],
+        name: game_data['game_infos']['name'],
+        img: game_data['igdb_infos']['cover_url'],
+        platforms: game_data['consoles'],
+        status: game_data['status'],
+        main_story: game_data['game_infos']['main_story_length']
+      });
     }
 
     modalOpen.value = false;

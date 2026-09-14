@@ -8,5 +8,12 @@
       <jdbc-url>jdbc:sqlite:D:\GameDev\Web_Developement\MediaBacklog\backend\data\database.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="database.db [2]" uuid="f3a32781-6fb1-4705-9f72-84fd39e59350">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:D:\GameDev\Web_Developement\MediaBacklog\c_backend\database.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

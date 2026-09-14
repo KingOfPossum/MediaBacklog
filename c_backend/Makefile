@@ -1,0 +1,24 @@
+CC = gcc
+
+CFLAGS = -Os -s -flto=auto 
+LDFLAGS = -lcurl -s -flto=auto -lws2_32
+
+SRCS = main.c server.c database.c databaseManager.c sqlite3.c api.c curl_http.c igdb_wrapper.c cJSON.c
+OBJS = $(SRCS:.c=.o)
+EXEC = backend
+
+ifeq ($(OS),Windows_NT)
+	LDFLAGS += -lws2_32
+	EXEF := $(EXEC).exe
+endif
+
+all: $(EXEC)
+
+$(EXEC): $(OBJS)
+	$(CC) $(OBJS) -o $(EXEC) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJS) $(EXEC)

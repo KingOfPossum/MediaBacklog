@@ -4,6 +4,7 @@ import {platforms} from "~/data/platforms.ts"
 export const useGames = () => {
   const platformFilter = useState('platformFilter',() => platforms.map((platform) => platform.label));
   const statusFilter = useState('statusFilter',() => ['Not Played','Started','Completed']);
+  const ascending = useState('ascending',() => true);
 
   const {searchQuery} = mainLayout();
 
@@ -19,5 +20,14 @@ export const useGames = () => {
     })
   });
 
-  return {platformFilter,statusFilter, displayedGames};
+  const sortByName = () => {
+    if (ascending.value) {
+      games.value.sort((a, b) => a.name.localeCompare(b.name));
+    }
+    else {
+      games.value.sort((a,b) => b.name.localeCompare(a.name));
+    }
+  }
+
+  return {platformFilter,statusFilter, displayedGames,sortByName,ascending};
 }
