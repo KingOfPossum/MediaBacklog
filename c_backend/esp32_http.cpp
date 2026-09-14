@@ -10,8 +10,8 @@ char *esp32_make_igdb_request(char *url, char* query) {
   HTTPClient http;
   http.begin(url);
   
-  http.addHeader("Client-ID", "m4nkh7koxu6lq6ndaj4bzs3n1148l5");
-  http.addHeader("Authorization", "Bearer rj6vnmvto0non59us71cglnb4fdhn1");
+  http.addHeader("Client-ID", "");
+  http.addHeader("Authorization", "Bearer ");
   http.addHeader("Accept", "application/json");
 
   int httpCode = http.POST((uint8_t*)query, strlen(query));
