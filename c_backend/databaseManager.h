@@ -1,6 +1,10 @@
 #ifndef DATABASE_MANAGER_H
 #define DATABASE_MANAGER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "database.h"
 #include "igdb_wrapper.h"
 
@@ -90,5 +94,9 @@ void free_APIGameEntry(APIGameEntry *game);
 void free_APIIGDBEntry(APIIGDBEntry *igdb);
 void free_APILibraryGameEntry(APILibraryGameEntry *entry);
 void free_APILibrary(APILibrary *library);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

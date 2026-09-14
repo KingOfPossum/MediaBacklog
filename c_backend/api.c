@@ -13,9 +13,16 @@
   #include <netinet/in.h>
   #include <arpa/inet.h>
   #include <unistd.h>
+  #include <Arduino.h>
 
   #define socketType int
   #define close_socket close
+#elif defined (ESP_PLATFORM) || defined(ESP32)
+  #include <lwip/sockets.h>
+  #include <lwip/netdb.h>
+
+  #define socketType int
+  #define close_socket lwip_close
 #endif
 
 #define BUFFER_SIZE 2048
@@ -32,31 +39,32 @@ void init_server() {
 
 void start_server(int port) {
   struct sockaddr_in service;
-  char buffer[BUFFER_SIZE] = {0};
+  char *buffer = calloc(BUFFER_SIZE, sizeof(char));
 
-  #ifdef _WIN32
-    int addrlen = sizeof(service);
-
-    WSADATA wsadata;
-    int wsaerr;
-    
-    WORD wVersionRequested = MAKEWORD(2,2);
-    
-    wsaerr = WSAStartup(wVersionRequested,&wsadata);
-    if(wsaerr != 0) {
-      printf("Winsock dll not found!\n");
-    }
-    else {
-      printf("Winsock dll found!\n");
-      printf("Status: %s\n",wsadata.szSystemStatus);
-    }
-  
-    server_socket = INVALID_SOCKET;
-  #elif defined(__linux__)
-    socklen_t addrlen = sizeof(service);
-  #endif
-  
   socketType server_socket, client_socket;
+  
+  #ifdef _WIN32
+  int addrlen = sizeof(service);
+  
+  WSADATA wsadata;
+  int wsaerr;
+  
+  WORD wVersionRequested = MAKEWORD(2,2);
+  
+  wsaerr = WSAStartup(wVersionRequested,&wsadata);
+  if(wsaerr != 0) {
+    printf("Winsock dll not found!\n");
+  }
+  else {
+    printf("Winsock dll found!\n");
+    printf("Status: %s\n",wsadata.szSystemStatus);
+  }
+  
+  server_socket = INVALID_SOCKET;
+  #elif defined(__linux__) || defined(ESP_PLATFORM) || defined(ESP32)
+  socklen_t addrlen = sizeof(service);
+  #endif  
+
   server_socket = socket(AF_INET, SOCK_STREAM, 0);
   
   #ifdef _WIN32
@@ -68,7 +76,7 @@ void start_server(int port) {
     else{
       printf("Socket is OK\n");
     }
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(ESP_PLATFORM) || defined(ESP32)
     if(server_socket < 0) {
       printf("Socket failed with error");
       return;
@@ -105,7 +113,7 @@ void start_server(int port) {
     }
 
     printf("Windows-Server running on http://localhost:%d\n",port);
-  #elif defined(__linux__)
+  #elif defined(__linux__) || defined(ESP_PLATFORM) || defined(ESP32) 
     if(bind(server_socket, (struct sockaddr *)&service, sizeof(service)) < 0) {
       printf("Binding failed with error\n");
       close_socket(server_socket);
@@ -133,7 +141,7 @@ void start_server(int port) {
       }
       
       int bytes_read = recv(client_socket, buffer, BUFFER_SIZE - 1,0);
-    #elif defined(__linux__)
+    #elif defined(__linux__) || defined(ESP_PLATFORM) || defined(ESP32)
       if(client_socket < 0) {
         printf("Accept failed!\n");
         continue;
@@ -194,11 +202,16 @@ void start_server(int port) {
     close_socket(client_socket);
     
     memset(buffer,0,BUFFER_SIZE);
+  
+    #if defined(ESP_PLATFORM) || defined(ESP_32)
+      delay(1);
+    #endif
   }
 
   close_socket(server_socket);
 
   free(api_bindings.all_bindings);
+  free(buffer);
 
   #ifdef _WIN32
     WSACleanup();

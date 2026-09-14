@@ -1,6 +1,10 @@
 #ifndef IGDB_WRAPPER
 #define IGDB_WRAPPER
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct IGDBTimeEntry {
   int hastily;
   int normally;
@@ -26,5 +30,9 @@ void print_entry(IGDBEntry entry);
 
 void init_wrapper();
 void exit_wrapper();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,6 +1,10 @@
 #ifndef DATABASE_H
 #define DATABASE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "sqlite3.h"
 
 typedef struct database_table {
@@ -35,5 +39,9 @@ void delete_sql(sqlite3 *connection, database_table table, char *where, char **p
 select_result *select_sql(sqlite3 *connection, database_table table,char **columns,int num_columns,char *where, char **params, int num_params);
 void free_select_results(select_result *results);
 void print_select_results(select_result results);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

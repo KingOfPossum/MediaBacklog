@@ -2,7 +2,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include "cJSON.h"
-#include <curl/curl.h>
+
+#if defined(ESP32) || defined(ESP_PLATFORM)
+  #include "esp32_http.h"
+  #define make_igdb_request esp32_make_igdb_request
+#else
+  #include "curl_http.h"
+  #define make_igdb_request curl_make_igdb_request
+#endif
 
 #include "igdb_wrapper.h"
 
@@ -12,31 +19,7 @@ static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, voi
 static char *construct_url(char *endpoint);
 static char *construct_query(char *game_name, char *platform);
 static char *construct_time_query(int igdb_id);
-static char *make_request(char *url, char *query);
 static IGDBEntry parseResult(char *result);
-
-struct MemoryStruct {
-  char *memory;
-  size_t size;
-};
-
-static size_t writeMemoryCallback(void *contents, size_t size, size_t nmemb, void *userp) {
-  size_t realsize = size * nmemb;
-  struct MemoryStruct *mem = (struct MemoryStruct *)userp;
-
-  char *ptr = realloc(mem->memory, mem->size + realsize + 1);
-  if(ptr == NULL) {
-    printf("Not enough memory!\n");
-    return 0;
-  }
-
-  mem->memory = ptr;
-  memcpy(&(mem->memory[mem->size]), contents, realsize);
-  mem->size += realsize;
-  mem->memory[mem->size] = 0;
-
-  return realsize;
-}
 
 static char *construct_url(char *endpoint) {
   size_t length = strlen(API_URL) + strlen(endpoint) + 1;
@@ -92,56 +75,6 @@ static char *construct_time_query(int igdb_id) {
   );
 
   return query;
-}
-
-static char *make_request(char *url, char *query) {
-  CURL *curl;
-  CURLcode res;
-
-  struct MemoryStruct chunk;
-  chunk.memory = malloc(1);
-  chunk.size = 0;
-
-  curl = curl_easy_init();
-
-  if(curl) {
-    curl_easy_setopt(curl,CURLOPT_URL, url);
-    curl_easy_setopt(curl,CURLOPT_WRITEFUNCTION, writeMemoryCallback);
-    curl_easy_setopt(curl,CURLOPT_WRITEDATA, (void *)&chunk);
-
-    struct curl_slist *headers = NULL;
-
-    char client_id[128];
-    char access_token[128];
-
-    snprintf(client_id, sizeof(client_id), "Client-ID: %s", getenv("IGDB_CLIENT_ID") ? getenv("IGDB_CLIENT_ID") : "");
-    snprintf(access_token, sizeof(access_token), "Authorization: Bearer %s", getenv("IGDB_ACCESS_TOKEN") ? getenv("IGDB_ACCESS_TOKEN") : "");
-
-    headers = curl_slist_append(headers, client_id);
-    headers = curl_slist_append(headers, access_token);
-    headers = curl_slist_append(headers, "Accept: application/json");
-
-    curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
-
-    curl_easy_setopt(curl, CURLOPT_POSTFIELDS, query);
-
-    res = curl_easy_perform(curl);
-
-    curl_easy_cleanup(curl);
-    curl_slist_free_all(headers);
-
-    if(res != CURLE_OK) {
-      printf("ERROR!\n");
-      free(chunk.memory);
-      return NULL;
-    }
-    else {
-      return chunk.memory;
-    }
-  }
-
-  free(chunk.memory);
-  return NULL;
 }
 
 static IGDBEntry parseResult(char *result) {  
@@ -311,7 +244,7 @@ IGDBEntry getGame(char *game_name, char *platform) {
 
   char *url = construct_url("games");
   char *query = construct_query(game_name,platform);
-  char *result = make_request(url,query);
+  char *result = make_igdb_request(url,query);
   
   if(result != NULL) {
     entry = parseResult(result);
@@ -320,7 +253,7 @@ IGDBEntry getGame(char *game_name, char *platform) {
   char *times_url = construct_url("game_time_to_beats");
   char *times_query = construct_time_query(entry.igdb_id);
 
-  result = make_request(times_url, times_query);
+  result = make_igdb_request(times_url, times_query);
   IGDBTimeEntry time_entry = parseTimeResult(result);
 
   memcpy(&entry.times, &time_entry, sizeof(IGDBTimeEntry));
@@ -332,28 +265,20 @@ IGDBEntry getGame(char *game_name, char *platform) {
   return entry;
 }
 
-void init_wrapper() {
-  curl_global_init(CURL_GLOBAL_ALL);
-}
-
-void exit_wrapper() {
-  curl_global_cleanup();
-}
-
 void print_entry(IGDBEntry entry) {
   printf("\nIGDB Game Entry:\n");
   printf("  ID: %d\n",entry.igdb_id);
-  printf("  Name: %s\n",entry.game_name);
-  printf("  URL: %s\n",entry.url);
-  printf("  Cover: %s\n",entry.cover_url);
-  printf("  Summary: %.150s...\n",entry.summary);
+  printf("  Name: %s\n",entry.game_name ? entry.game_name : "N/A");
+  printf("  URL: %s\n",entry.url ? entry.url : "N/A");
+  printf("  Cover: %s\n",entry.cover_url ? entry.cover_url : "N/A");
+  printf("  Summary: %.150s...\n",entry.summary ? entry.summary : "N/A");
   printf("  Platforms:\n");
   for(int i = 0;i < entry.num_platforms;i++) {
-    printf("    -%s\n",entry.platforms[i]);
+    printf("    -%s\n",entry.platforms[i] ? entry.platforms[i] : "N/A");
   }
   printf("  Genres:\n");
   for(int i = 0;i < entry.num_genres;i++) {
-    printf("    -%s\n",entry.genres[i]);
+    printf("    -%s\n",entry.genres[i] ? entry.genres[i] : "N/A");
   }
   printf("Times:\n");
   printf("  Hastily: %d\n",entry.times.hastily);

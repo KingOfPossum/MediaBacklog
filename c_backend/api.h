@@ -1,6 +1,10 @@
 #ifndef API_H
 #define API_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef enum RequestType {
   GET_REQUEST,
   POST_REQUEST
@@ -25,5 +29,9 @@ void bind_post_request(char *request, char *(*func)(char *));
 
 void decode_url(char *url);
 char *get_query_param(const char *buffer, const char *key);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
